@@ -1,0 +1,9 @@
+[general]
+name=PreCourlis
+email=quarre@deltacad.fr
+author=Quarre, Hubert
+qgisMinimumVersion=2.0
+description=Creation de profils pour Courlis
+version=version 1.0.d
+; end of mandatory metadata
+icon=icon.png
