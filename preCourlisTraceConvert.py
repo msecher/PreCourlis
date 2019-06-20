@@ -180,14 +180,14 @@ class preCourlisTraceConvert():
       
       
       #writer = QgsVectorFileWriter()
-      error = QgsVectorFileWriter.writeAsVectorFormat(layer_trace, working_dir+"\\layer_trace_tmp.shp","System",None,"ESRI Shapefile")
+      error = QgsVectorFileWriter.writeAsVectorFormat(layer_trace, working_dir+"/layer_trace_tmp.shp","System",None,"ESRI Shapefile")
       if error == QgsVectorFileWriter.NoError:
             #print "layer_trace_tmp.shp ecrit"
             self.fichier_log.write("        layer_trace_tmp.shp ecrit\n")
       
       #del writer
       #QgsGeometryAnalyzer().buffer(layer_trace, working_dir+"\\layer_trace_tmp.shp", -1, False, False, -1)
-      layer_trace_to_delete=QgsVectorLayer(working_dir+"\\layer_trace_tmp.shp", "Trace_temp", "ogr")
+      layer_trace_to_delete=QgsVectorLayer(working_dir+"/layer_trace_tmp.shp", "Trace_temp", "ogr")
       QgsMapLayerRegistry.instance().addMapLayer(layer_trace_to_delete)
       extent=layer_trace_to_delete.extent()
       xmax=extent.xMaximum()
@@ -198,8 +198,8 @@ class preCourlisTraceConvert():
 
       
       self.fichier_log.write("        execution de v.to.points\n")
-      processing.runalg("grass7:v.to.points", layer_trace_to_delete,self.distance,0,True,coords,False,False,0,working_dir+"\\MesPoints.shp")
-      layer_tmp=QgsVectorLayer(working_dir+"\\MesPoints.shp", "point_temporaire", "ogr")
+      processing.runalg("grass7:v.to.points", layer_trace_to_delete,self.distance,0,True,coords,False,False,0,working_dir+"/MesPoints.shp")
+      layer_tmp=QgsVectorLayer(working_dir+"/MesPoints.shp", "point_temporaire", "ogr")
       if not layer_tmp.isValid():
           print "Impossible de charger la couche de point."
           self.fichier_log.write("       Impossible de charger la couche de point.\n")
@@ -236,8 +236,8 @@ class preCourlisTraceConvert():
           self.fichier_log.write("        execution de addgridvaluestopoints\n")   
 #MS2018 prototypage de la fonction saga via runalg a changé entre 2.18.3 et 2.18.16 ==> 5eme parametre en plus dont l'utilite n'est pas claire (redondant avec le 4eme?)
 #gestion d'erreur à intégrer : processing.runalg('saga:addgridvaluestopoints') renvoie un dictionnaire lorsqu'il fonctionne (et None sinon)
-          processing.runalg('saga:addgridvaluestopoints', layer_tmp, self.mnt.source(), 0, 0,working_dir+"\\MesPointsZ.shp")
-          layer_tmp2=QgsVectorLayer(working_dir+"\\MesPointsZ.shp", "point_temporaire_Z", "ogr")
+          processing.runalg('saga:addgridvaluestopoints', layer_tmp, self.mnt.source(), 0, 0,working_dir+"/MesPointsZ.shp")
+          layer_tmp2=QgsVectorLayer(working_dir+"/MesPointsZ.shp", "point_temporaire_Z", "ogr")
           if not layer_tmp.isValid():
               print "Impossible de charger la couche de point avec valeur."
               self.fichier_log.write("       Impossible de charger la couche de point avec valeur\n ")
