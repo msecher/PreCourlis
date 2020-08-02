@@ -5,6 +5,7 @@ from qgis.core import (
 from qgis.PyQt import QtCore, QtWidgets
 
 from PreCourlis.core.precourlis_file import PreCourlisFileLine
+from PreCourlis.widgets.graph_tools import DrawBoxTool
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
@@ -20,6 +21,9 @@ class GraphWidget(FigureCanvas):
         super().__init__(self.figure)
 
         self.graph = plt.subplot(111)
+
+        self.zoom_tool = DrawBoxTool(self, self.graph)
+        self.zoom_tool.activate()
 
         self.file = None
         self.feature = None
