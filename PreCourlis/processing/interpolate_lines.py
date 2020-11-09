@@ -2,6 +2,7 @@ from qgis.core import (
     QgsProcessing,
     QgsFeatureRequest,
     QgsProcessingMultiStepFeedback,
+    QgsProcessingOutputLayerDefinition,
     QgsProcessingParameterFeatureSink,
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterField,
@@ -156,6 +157,9 @@ class InterpolateLinesAlgorithm(PreCourlisAlgorithm):
         if feedback.isCanceled():
             return {}
 
+        output = QgsProcessingOutputLayerDefinition(parameters[self.OUTPUT])
+        output.destinationName = self.tr("Interpolated")
+
         # Points to lines
         alg_params = {
             "INPUT": current,
@@ -163,7 +167,7 @@ class InterpolateLinesAlgorithm(PreCourlisAlgorithm):
             "FIRST_SECTION_ABS_LONG": first_abs_long,
             "GROUP_FIELD": "abs_long",
             "ORDER_FIELD": "p_id",
-            "OUTPUT": parameters[self.OUTPUT],
+            "OUTPUT": output,
         }
         outputs["PointsToLines"] = processing.run(
             "precourlis:points_to_lines",

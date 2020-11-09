@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE TS><TS version="2.0" language="fr_FR" sourcelanguage="">
+<!DOCTYPE TS>
+<TS version="2.1" language="fr_FR">
 <context>
     <name>ExportCourlisAlgorithm</name>
     <message>
@@ -87,6 +88,44 @@
         <location filename="../processing/import_georef_algorithm.py" line="27"/>
         <source>Coordinates projection system</source>
         <translation>Système de projection</translation>
+    </message>
+</context>
+<context>
+    <name>ImportLayerFromDemAlgorithm</name>
+    <message>
+        <location filename="../processing/import_layer_from_dem_algorithm.py" line="33"/>
+        <source>Layer name</source>
+        <translation>Nom de la couche</translation>
+    </message>
+    <message>
+        <location filename="../processing/import_layer_from_dem_algorithm.py" line="38"/>
+        <source>Digital Elevation Model</source>
+        <translation>Modèle numérique de terrain</translation>
+    </message>
+    <message>
+        <location filename="../processing/import_layer_from_dem_algorithm.py" line="43"/>
+        <source>Band number</source>
+        <translation>Numéro de la bande</translation>
+    </message>
+    <message>
+        <location filename="../processing/import_layer_from_dem_algorithm.py" line="51"/>
+        <source>Layer added</source>
+        <translation>Coouche ajoutée</translation>
+    </message>
+    <message>
+        <location filename="../processing/import_layer_from_dem_algorithm.py" line="119"/>
+        <source>Import layer from DEM</source>
+        <translation>Importer une couche depuis un MNT</translation>
+    </message>
+    <message>
+        <location filename="../processing/import_layer_from_dem_algorithm.py" line="122"/>
+        <source>Import</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../processing/import_layer_from_dem_algorithm.py" line="25"/>
+        <source>Input</source>
+        <translation>Entrée</translation>
     </message>
 </context>
 <context>
@@ -325,7 +364,7 @@
 <context>
     <name>PreCourlisProvider</name>
     <message>
-        <location filename="../processing/precourlis_provider.py" line="84"/>
+        <location filename="../processing/precourlis_provider.py" line="88"/>
         <source>PreCourlis</source>
         <translation></translation>
     </message>
@@ -378,7 +417,8 @@ Errors: {}
 </source>
         <translation>Impossible d&apos;enregistrer les modifications à la couche {}
 
-Erreurs: {}</translation>
+Erreurs: {}
+</translation>
     </message>
 </context>
 <context>

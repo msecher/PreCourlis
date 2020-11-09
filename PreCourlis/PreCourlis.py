@@ -108,6 +108,7 @@ class PreCourlisPlugin:
         # self.add_action("Projeter un semis de point sur les profils", self.projZProfil)
         # self.add_action("Projeter les berges", self.projAxeBerge)
         self.add_action("Interpoler des profils", self.interpolate_profiles)
+        self.add_action("Ajouter une couche depuis un MNT", self.import_layer_from_dem)
         # self.add_action("A propos", slot, QIcon(":/plugins/precourlis/icon.png"))
         self.add_action("Exporter un fichier de géométrie Courlis", self.export_courlis)
         self.add_action(
@@ -182,6 +183,9 @@ class PreCourlisPlugin:
             self.profile_dialog.setAttribute(Qt.WA_DeleteOnClose)
             self.profile_dialog.destroyed.connect(self.profile_dialog_destroyed)
         self.profile_dialog.show()
+
+    def import_layer_from_dem(self):
+        execAlgorithmDialog("precourlis:import_layer_from_dem")
 
     def profile_dialog_destroyed(self):
         self.profile_dialog.graphWidget.close_figure()

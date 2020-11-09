@@ -184,7 +184,16 @@ class PreCourlisFileLine(PreCourlisFileBase):
         else:
             self._layer.setCustomProperty(key, color_to_hex(color))
 
-    def add_sedimental_layer(self, name, from_layer, deltaz=0):
+    def add_sedimental_layer(self, name, from_layer=None, deltaz=0):
+        """
+        Add new sedimental layer.
+        If from_layer is None:
+            - value is calculated from geometry Z value
+            - layer is appended at the end of existing layers
+        If from_layer is not None:
+            - value = value from layer_name + delta
+            - layer is inserted before or after layer_named depending on delta
+        """
         layers = self.layers()
         if self._layer.fields().indexFromName(name) != -1:
             raise KeyError("Field {} already exists".format(name))
@@ -197,29 +206,36 @@ class PreCourlisFileLine(PreCourlisFileBase):
         self._layer.updateFields()
 
         # Update layers list and set value of new attributes
-        if from_layer == "zfond":
-            from_layer_index = -1
-            if deltaz > 0:
-                raise ValueError("Impossible to add layer on top of zfond")
+        if from_layer is None:
+            new_layer_index = len(layers)
         else:
-            from_layer_index = layers.index(from_layer)
-        new_layer_index = from_layer_index if deltaz > 0 else from_layer_index + 1
+            if from_layer == "zfond":
+                from_layer_index = -1
+                if deltaz > 0:
+                    raise ValueError("Impossible to add layer on top of zfond")
+            else:
+                from_layer_index = layers.index(from_layer)
+            new_layer_index = from_layer_index if deltaz > 0 else from_layer_index + 1
+            source_field_index = self._layer.fields().indexFromName(from_layer)
 
         layers.insert(new_layer_index, name)
         layers_list = ",".join(layers)
 
         layers_field_index = self._layer.fields().indexFromName("layers")
-        source_field_index = self._layer.fields().indexFromName(from_layer)
         dest_field_index = self._layer.fields().indexFromName(name)
 
         for f in self._layer.getFeatures():
             self._layer.changeAttributeValue(f.id(), layers_field_index, layers_list)
-            value = f.attribute(source_field_index)
-            if not is_null(value):
-                values = value.split(",")
-                value = ",".join(
-                    [str(v if v == "NULL" else float(v) + deltaz) for v in values]
-                )
+            if from_layer is None:
+                line = next(f.geometry().constParts()).clone()
+                value = ",".join([str(p.z()) for p in line.points()])
+            else:
+                value = f.attribute(source_field_index)
+                if not is_null(value):
+                    values = value.split(",")
+                    value = ",".join(
+                        [str(v if v == "NULL" else float(v) + deltaz) for v in values]
+                    )
             self._layer.changeAttributeValue(f.id(), dest_field_index, value)
 
         self._layer.endEditCommand()

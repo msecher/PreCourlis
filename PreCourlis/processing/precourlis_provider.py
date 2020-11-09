@@ -4,6 +4,9 @@ from qgis.core import QgsProcessingProvider
 from qgis.PyQt.QtGui import QIcon
 from processing.gui.RenderingStyles import RenderingStyles
 
+from PreCourlis.processing.import_layer_from_dem_algorithm import (
+    ImportLayerFromDemAlgorithm,
+)
 from PreCourlis.processing.export_courlis_algorithm import ExportCourlisAlgorithm
 from PreCourlis.processing.export_mascaret_algorithm import ExportMascaretAlgorithm
 from PreCourlis.processing.import_georef_algorithm import ImportGeorefAlgorithm
@@ -40,6 +43,7 @@ class PreCourlisProvider(QgsProcessingProvider):
         self.addAlgorithm(ExportCourlisAlgorithm())
         self.addAlgorithm(ExportMascaretAlgorithm())
         self.addAlgorithm(ImportGeorefAlgorithm())
+        self.addAlgorithm(ImportLayerFromDemAlgorithm())
         self.addAlgorithm(ImportTracksAlgorithm())
         self.addAlgorithm(InterpolateLinesAlgorithm())
         self.addAlgorithm(InterpolatePointsAlgorithm())
