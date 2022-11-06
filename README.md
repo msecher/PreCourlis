@@ -1,7 +1,20 @@
 # PreCourlis QGIS plugin
 
-QGIS 3 plugin that is meant to model the bed of rivers and export data for the
-Courlis module of Telemac-Mascaret.
+QGIS 3 plugin that is meant to:
+
+Create geometry - sediment layered 1D cross-sections - of rivers for COURLIS which is the sediment transport module for MASCARET, the 1D free surface flow code of the Open TELEMAC-MASCARET platform (http://www.opentelemac.org/)
+
+This plugin allows you to:
+    - import georeferenced MASCARET geometry,
+    - extract geometric information from a DEM (raster) on polylines representing the cross-sections of the MASCARET-COURLIS model in respect with a user defined discretization,
+    - interpolate cross sections along an hydraulic axis in respect with user defined longitudinal (number of cross-sections) and lateral (number of points on each profile) discretization,
+    - visualize the cross-sections in a graphical view,
+    - add sediment layers and bed rock to the cross-sections from river bed geometry (identical or with a Z shift) or from another DEM (raster),
+    - modify manually or with some functionality more automatic the river bed geometry, sediment layers geometry or bedrock geometry,
+    - and export data for the COURLIS module
+    PRECOURLIS is using :
+    - A fork of TatooineMesher (courtesy of CNR Engineering, https://github.com/CNR-Engineering/TatooineMesher)
+    - Modified version of Python classes of the TELEMAC-MASCARET system
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE.md)
 ![Continuous integration](https://github.com/msecher/PreCourlis/workflows/Continuous%20integration/badge.svg)
