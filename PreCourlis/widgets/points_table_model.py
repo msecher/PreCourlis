@@ -7,12 +7,12 @@ class PointsTableModel(QtCore.QAbstractTableModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.section = None
-        self.property_list = []
+        self.columns = ["abs_lat", "topo_bat", "zfond"]
 
     def set_section(self, section):
         self.beginResetModel()
         self.section = section
-        self.columns = ["abs_lat", "zfond"] + section.layer_names
+        self.columns = ["abs_lat", "topo_bat", "zfond"] + section.layer_names
         self.endResetModel()
 
     def rowCount(self, parent=QtCore.QModelIndex()):
@@ -53,12 +53,16 @@ class PointsTableModel(QtCore.QAbstractTableModel):
             column = self.columns[index.column()]
             if column == "abs_lat":
                 v = self.section.distances[index.row()]
+            elif column == "topo_bat":
+                v = self.section.topo_bats[index.row()]
             elif column == "zfond":
                 v = self.section.z[index.row()]
             else:
-                v = self.section.layers_elev[index.column() - 2][index.row()]
+                v = self.section.layers_elev[index.column() - 3][index.row()]
 
         if role == QtCore.Qt.DisplayRole:
+            if column == "topo_bat":
+                return v
             return str(round(v, 3)) if v is not None else None
 
         if role == QtCore.Qt.EditRole:
@@ -71,10 +75,12 @@ class PointsTableModel(QtCore.QAbstractTableModel):
             column = self.columns[index.column()]
             if column == "abs_lat":
                 self.section.distances[index.row()] = v
+            elif column == "topo_bat":
+                self.section.topo_bats[index.row()] = v
             elif column == "zfond":
                 self.section.z[index.row()] = v
             else:
-                self.section.layers_elev[index.column() - 2][index.row()] = v
+                self.section.layers_elev[index.column() - 3][index.row()] = v
 
             self.dataChanged.emit(index, index, [QtCore.Qt.EditRole])
             return True

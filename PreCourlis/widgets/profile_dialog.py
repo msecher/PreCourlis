@@ -114,6 +114,10 @@ class ProfileDialog(QtWidgets.QDialog, FORM_CLASS):
 
     def init_points_table_view(self):
         self.pointsTableView.setItemDelegate(FloatDelegate(self))
+        self.pointsTableView.setItemDelegateForColumn(
+            self.pointsTableModel.columns.index("topo_bat"),
+            QtWidgets.QStyledItemDelegate(self),
+        )
         self.pointsTableView.setModel(self.pointsTableModel)
 
     def init_graph_widget(self):
