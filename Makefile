@@ -131,8 +131,7 @@ package: deploy
 .PHONY: upload
 upload: ## Upload plugin to QGIS Plugin repo
 upload: package
-	$(PLUGIN_UPLOAD) $(PLUGINNAME).zip
-
+	./scripts/plugin_upload.py dist/$(PLUGINNAME).zip
 
 .PHONY: link
 link: ## Create symbolic link to this folder in your QGIS plugins folder (for development)
