@@ -22,6 +22,7 @@
  ***************************************************************************/
 """
 import os.path
+from functools import partial
 
 from qgis.core import QgsApplication, QgsProject
 from qgis.PyQt.QtCore import (
@@ -73,7 +74,7 @@ class PreCourlisPlugin:
         self.action = None
         self.actions = []
         self.menu = self.tr(u"&PreCourlis")
-        self.profile_dialog = None
+        self.profile_dialogs = []
         self.provider = None
 
     # noinspection PyMethodMayBeStatic
@@ -166,8 +167,8 @@ class PreCourlisPlugin:
         self.iface.removePluginMenu("&PreCourlis", self.action)
         self.iface.removeToolBarIcon(self.action)
 
-        if self.profile_dialog is not None:
-            self.profile_dialog.deleteLater()
+        for dialog in self.profile_dialogs:
+            dialog.deleteLater()
 
     def import_georef(self):
         execAlgorithmDialog(
@@ -181,15 +182,15 @@ class PreCourlisPlugin:
         execAlgorithmDialog("precourlis:import_tracks", {})
 
     def open_editor(self):
-        if self.profile_dialog is None:
-            self.profile_dialog = ProfileDialog(self.iface.mainWindow())
-            self.profile_dialog.setAttribute(Qt.WA_DeleteOnClose)
-            self.profile_dialog.destroyed.connect(self.profile_dialog_destroyed)
-        self.profile_dialog.show()
+        dialog = ProfileDialog(self.iface.mainWindow())
+        dialog.setAttribute(Qt.WA_DeleteOnClose)
+        dialog.destroyed.connect(partial(self.profile_dialog_destroyed, dialog))
+        dialog.show()
+        self.profile_dialogs.append(dialog)
 
-    def profile_dialog_destroyed(self):
-        self.profile_dialog.graphWidget.close_figure()
-        self.profile_dialog = None
+    def profile_dialog_destroyed(self, dialog):
+        dialog.graphWidget.close_figure()
+        self.profile_dialogs.remove(dialog)
 
     def interpolate_profiles(self):
         execAlgorithmDialog("precourlis:interpolate_lines", {})
