@@ -60,15 +60,15 @@ class Reach:
     def get_section_idx(self, section_id):
         """
         Get section index
-        @param section_id(int) section identifier
-        @return: (int) request section index
+        @param section_id (int) section identifier
+        @return (int) request section index
         """
         section_ids = list(self.sections.keys())
         try:
             return section_ids.index(section_id)
         except ValueError:
-            raise MascaretException('Section identifier %i is not found.\n'\
-                                    'Possible section identifiers are:\n%s' \
+            raise MascaretException('Section identifier %i is not found.\n'
+                                    'Possible section identifiers are:\n%s'
                                     % (section_id, section_ids))
 
     def __repr__(self):
@@ -125,6 +125,7 @@ class Section:
         self.y = np.array([])
         self.z = np.array([])
         self.distances = np.array([])
+        self.topo_bath = []
         self.nb_points = 0
         self.limits = {}
 
@@ -132,60 +133,148 @@ class Section:
         self.layers_elev = None
         self.layer_names = []
 
-    def set_points_from_trans(self, dist_array, z_array):
+    def set_points_from_trans(self, dist_array, z_array, topo_baths=None):
+        """
+        Method to add points on the section with transversal abscissa
+        and elevations
+
+        @param dist_array (float list) section points abscissa
+        @param z_array (float list) section points elevations
+        @param topo_baths (str float) topo-bath section points definition ("T"
+        if topographic point, "B" if bathymétric points)
+        """
         if len(dist_array) != len(z_array):
-            raise MascaretException(\
-                 'set_points_from_trans: Input arrays have not the same length')
-        self.allocate(len(dist_array))
-        for i, (dist, z) in enumerate(zip(dist_array, z_array)):
-            if i == 0:
-                limit = 'RD'
-            elif i == (self.nb_points - 1):
+            raise MascaretException(
+                 'set_points_from_trans:\
+                  Input arrays have not the same length')
+        self._allocate(len(dist_array))
+        first_RG_pt = True
+        first_RD_pt = True
+
+        if topo_baths is None:
+            topo_baths = ["B" for i in z_array]
+
+        for i, (dist, z, topo_bath) in \
+                enumerate(zip(dist_array, z_array, topo_baths)):
+            if topo_bath == "B" and first_RG_pt is True:
                 limit = 'RG'
+                first_RG_pt = False
+            elif (topo_bath == "T" and first_RG_pt is False and
+                  first_RD_pt is True) or (i == (self.nb_points - 1) and
+                                           first_RD_pt is True):
+                self.limits['RD'] = i - 1
+                first_RD_pt = False
             else:
                 limit = None
-            self.set_point(i, self.pk, dist, z, limit)
+            self.set_point(i, self.pk, dist, z, topo_bath, limit)
 
-    def set_points_from_xyz(self, x_list, y_list, z_list):
+    def set_points_from_xyz(self, x_list, y_list, z_list, topo_baths=None):
+        """
+        Method to add points on the section with X and Y coordinates,
+        and elevations
+
+        @param x_list (float list) section points X coordinates
+        @param y_list (float list) section points Y coordinates
+        @param z_list (float list) section points elevations
+        @param topo_baths (str list) topo-bath section points definition ("T"
+        if topographic point, "B" if bathymétric points)
+        """
+
         if not len(x_list) == len(y_list) == len(z_list):
-            raise MascaretException(\
-                   'set_points_from_xyz: Input arrays have not the same length')
-        self.allocate(len(x_list))
-        for i, (x, y, z) in enumerate(zip(x_list, y_list, z_list)):
-            if i == 0:
-                limit = 'RD'
-            elif i == (self.nb_points - 1):
+            raise MascaretException(
+                'set_points_from_xyz: Input arrays have not the same length')
+        self._allocate(len(x_list))
+        first_RG_pt = True
+        first_RD_pt = True
+
+        if topo_baths is None:
+            topo_baths = ["B" for i in z_list]
+
+        for i, (x, y, z, topo_bath) in \
+                enumerate(zip(x_list, y_list, z_list, topo_baths)):
+            if topo_bath == "B" and first_RG_pt is True:
                 limit = 'RG'
+                first_RG_pt = False
+            elif (topo_bath == "T" and first_RG_pt is False and
+                    first_RD_pt is True) or (i == (self.nb_points - 1) and
+                                             first_RD_pt is True):
+                self.limits['RD'] = i - 1
+                first_RD_pt = False
             else:
                 limit = None
-            self.set_point(i, x, y, z, limit)
+            self.set_point(i, x, y, z, topo_bath, limit)
 
-    def set_axis(self, xa, ya):
-        self.axis = (xa, ya)
+    def set_axis(self, x_axis, y_axis):
+        """
+        Method to define X and Y coordinates of the section point corresponding
+        to intersection of the section and the hydraulic axis crossed by the
+        hydraulic axis
+
+        @param x_axis (float) X coordinate of the section point belonging
+        to hydraulic axis
+        @param y_axis (float) Y coordinate of the section point belonging
+        to hydraulic axis
+        """
+        self.axis = (x_axis, y_axis)
 
     def get_limit(self, limit_name):
+        """
+        Method which is returning index of the topography/bathymetry limits on
+        the section (i.e. left and right river banks)
+        These limits are also the limit between minor and major bed
+
+        @param limit_name (str) 'RD' for right bank limit or 'RG' for the
+        left bank limit
+        @return (int) index of the point corresponding to the limit (taken
+        in the minor bed part)
+        """
         try:
             return self.limits[limit_name]
         except KeyError:
-            raise MascaretException('Limit %s is not found in %s' % (limit_name, self))
+            raise MascaretException('Limit %s is not found in %s' %
+                                    (limit_name, self))
 
     def point_index_limit(self, i):
+        """
+        Method which is returning name limit ('RD' for right bank and 'RG' for
+        left bank of the topography/bathymetry limits on the section
+        These limits are also the limit between minor and major bed
+
+        @param (int) index of the point corresponding to the limit (taken
+        in the minor bed part)
+        @return limit_name (str) 'RD' for right bank limit or 'RG' for the
+        left bank limit
+        """
         for limit_name, index in self.limits.items():
             if index == i:
                 return limit_name
         return None
 
-    def allocate(self, nb_points):
+    def _allocate(self, nb_points):
         self.x = np.empty(nb_points)
         self.y = np.empty(nb_points)
         self.z = np.empty(nb_points)
         self.distances = np.empty(nb_points)
         self.nb_points = nb_points
 
-    def set_point(self, i, x, y, z, limit=None):
+    def set_point(self, i, x, y, z, topo_bath, limit=None):
+        """
+        Method to add a point to a section
+
+        @param i (int) index of the point in the section
+        @param x (float) X coordinates of the point
+        @param y (float) Y coordinates of the point
+        @param z (float) Z elevation of the point
+        @param topo_bath (str) Type of the point : 'T' for topographic
+        (i.e. major bed) ; 'B' for bathymetric (i.e. minor bed)
+        @param limit (str) point corresponding to the minor/major bed limit
+        ('RG' : left bank ; 'RD' : right bank), limit is fixed inside
+        bathymetric points 'B' (minor bed)
+        """
         self.x[i] = x
         self.y[i] = y
         self.z[i] = z
+        self.topo_bath.append(topo_bath)
         if limit is not None:
             self.limits[limit] = i
         if i == 0:
@@ -195,7 +284,15 @@ class Section:
                                 sqrt((self.x[i] - self.x[i - 1]) ** 2 +
                                      (self.y[i] - self.y[i - 1]) ** 2)
 
-    def add_layer(self, thickness_table, name=None):
+    def add_layer_from_thickness(self, thickness_table, name=None):
+        """
+        Add a sediment layer to a section with a thickness table
+
+        @param thickness_table (numpy array) array which contain thickness of
+        the sediment layer to add to the section (size should correspond with
+        the number of points in the section)
+        @param name (str) name of the layer
+        """
         self.nlayers += 1
         if name is None:
             name = 'Layer ' + str(self.nlayers)
@@ -206,13 +303,41 @@ class Section:
 
         else:
             self.layers_elev = np.vstack((self.layers_elev,
-                                          self.layers_elev[self.nlayers - 2] - thickness_table))
+                                          self.layers_elev[self.nlayers - 2]
+                                          - thickness_table))
+
+    def add_layers_from_elevations(self, layers_elev, names=None):
+        """
+        Add a sediment layer to a section with an array of elevations
+
+        @param layers_elev (numpy array) array which contain elevations of
+        the sediment layer to add to the section (size should correspond with
+        the number of points in the section)
+        @param name (str) name of the layer
+        """
+        self.nlayers = len(layers_elev[0])
+        if names is None:
+            for n in range(self.nlayers):
+                self.layer_names.append('Layer_' + str(n))
+        else:
+            for name in names:
+                self.layer_names.append(name)
+        self.layers_elev = np.array(layers_elev).T
 
     def iter_on_points(self):
-        for i, (x, y, z) in enumerate(zip(self.x, self.y, self.z)):
+        """
+        Method to iterate on points of the section
+
+        @return (float, float, float, str, str) return X and Y coordinates,
+        elevation, type ('T' or 'B', i.e. major or minor bed), limit of
+        minor/major bed (None if the point is not a limit, 'RG'/'RD' if the
+        point correspond to a limit
+        """
+        for i, (x, y, z, topo_bath) in enumerate(zip(self.x, self.y, self.z,
+                                                 self.topo_bath)):
             limit = self.point_index_limit(i)
             limit_str = limit if limit is not None else ''
-            yield x, y, z, limit_str
+            yield x, y, z, topo_bath, limit_str
 
     def common_limits(self, other):
         """
@@ -222,10 +347,13 @@ class Section:
         """
         return list(set(self.limits.keys()).intersection(other.limits.keys()))
 
-    def check_elevations(self):
-        pass  # TODO
-
     def __repr__(self):
+        """
+        Method which defines the representation of the class (in a print
+        function)
+
+        @return (str) representation of the class
+        """
         return 'Section #%i (%s) at pk %f' % (self.id, self.name, self.pk)
 
 
@@ -237,15 +365,16 @@ class MascaretFileParent:
 
     logger = logging.getLogger(__name__)
 
-    def __init__(self, file_name, access='r', log_lvl='INFO'):
+    def __init__(self, filename, access='r', log_lvl='INFO'):
         """
         Constructor for MascaretFile
         Warning Only suited for results at cross-sections (not adapted to
         Casier or Traceur outputs)
 
-        @param file_name (str) Name of the file
+        @param filename (str) Name of the file
         @param access (str) Access to the file ('r' for read 'w' for write, add
         'b' for binary file)
+        @param log_lvl (str) logger level
 
         Attributs:
         - file_name: file name
@@ -265,8 +394,9 @@ class MascaretFileParent:
         logging.basicConfig(level=i_log)
 
         # File name
-        self.file_name = file_name
+        self.filename = filename
         self._position_first_frame = 0
+        self.fformat = None
 
         # Attributes for geometry
         self.nreaches = 0
@@ -283,24 +413,24 @@ class MascaretFileParent:
         # Attributes for section variables
         self.nsectionvar = 0
         self.section_varnames_dict = {'names': [],
-                              'abbr': [],
-                              'id': [],
-                              'units': []}
+                                      'abbr': [],
+                                      'id': [],
+                                      'units': []}
 
         # Attributes for temporal data
         self._times = []
         self._times_pos = []
         self._ntimestep = 0
 
-        self._file = open(self.file_name, access)
+        self._file = open(self.filename, access=access, encoding='utf-8')
 
     def __del__(self):
-        self.logger.debug("Closing mesh file %s", self.file_name)
+        self.logger.debug("Closing mesh file %s", self.filename)
         if self._file is not None:
             self._file.close()
 
     def __repr__(self):
-        return 'MascaretFile: %s (mode=%s)' % (self.file_name, self._file.mode)
+        return 'MascaretFile: %s (mode=%s)' % (self.filename, self._file.mode)
 
     @property
     def times(self):
@@ -339,16 +469,28 @@ class MascaretFileParent:
         return self._reaches
 
     def _move_to_first_frame(self):
-        """Start file reader position before first frame definition for Rubens file"""
+        """Start file reader position before first frame
+         definition for Rubens file"""
         self._file.seek(self._position_first_frame)
 
     def get_time(self):
+        """
+        Method which return time of a MascaretFile (overrided in child class)
+        """
         raise NotImplementedError('Has to be override in subclass')
 
     def get_reaches(self):
+        """
+        Method which return reaches of a MascaretFile (overrided in child
+        class)
+        """
         raise NotImplementedError('Has to be override in subclass')
 
     def error(self, message):
+        """
+        Method which handle error in use of a MascaretFile (overrided in child
+        class)
+        """
         raise MascaretException('ERROR: %s' % message)
 
     def add_variable(self, varname, varunit, varname_abbr):
@@ -367,20 +509,26 @@ class MascaretFileParent:
         self.section_varnames_dict['id'].append(self.nsectionvar)
         self.nsectionvar += 1
 
-    def get_position_var(self, var_name, type='names'):
+    def get_position_var(self, var_name, name_type='names'):
         """
         Get position variable
+
         @param var_name (string) variable name
-        @return: variable name index
+        @param name_type (string) 'names' for full name or 'abbr' for
+        abreviation
+
+        @return variable name index
         """
         try:
-            if type == 'abbr':
+            if name_type == 'abbr':
                 return self.varnames_dict['abbr'].index(var_name)
-            else:
-                return self.varnames_dict['names'].index(var_name)
+
+            return self.varnames_dict['names'].index(var_name)
+
         except ValueError:
             self.error('Variable `%s` not found. '
-                       'Possibles values are:\n%s' % (var_name, self.varnames_dict[type]))
+                       'Possibles values are:\n%s' %
+                       (var_name, self.varnames_dict[name_type]))
 
     def get_values_at_reach(self, record, reach_id, vars_indexes=None):
         """
@@ -395,37 +543,44 @@ class MascaretFileParent:
 
         return self.get_values(record, vars_indexes)[reach_id]
 
-    def get_values_at_sections(self, record, section_id, reach_id=1, section_vars_indexes=None):
+    def get_values_at_sections(self, record, section_id, reach_id=1,
+                               section_vars_indexes=None):
         """
         Get values for section variables for a single reach
+
         @param record (int) time index
+        @param section_id (int) id of the section
         @param reach_id (int) reach index
-        @param vars_indexes (list) List of variable names
+        @param section_vars_indexes (list) List of variable names
+
         @return (numpy.array)
         """
 
-        if self.fformat is not 'ptravers':
-            self.error("The method get_values_at_section is not possible with the kind of file loaded"
-                  " (only for ptravers which stores section variables)")
+        if self.fformat != 'ptravers':
+            self.error("The method get_values_at_section is not possible\
+                        with the kind of file loaded"
+                       " (only for ptravers which stores section variables)")
 
         if self.nsectionvar == 0:
             self.error('There is no section variable loaded yet')
 
         if section_vars_indexes is None:
             section_vars_indexes = self.section_varnames_dict['id']
-        _, res_sections = self.get_values(
-                                          record,
-                                          get_section_values=True,
-                                          section_vars_indexes=section_vars_indexes
-                                          )
+        _, res_sections = \
+            self.get_values(
+                            record,
+                            get_section_values=True,
+                            section_vars_indexes=section_vars_indexes
+                           )
         return res_sections[reach_id][section_id]
-
 
     def get_position_var_abbr(self, var_abbr):
         """
         Get position  of the abbreviation variable
-        @param var_abbr(string) variable name
-        @return: variable name index
+
+        @param var_abbr (string) variable name
+
+        @return variable name index
         """
         return self.varnames_dict['abbr'].index(var_abbr)
 
@@ -440,17 +595,20 @@ class MascaretFileParent:
                 return reach.id
         raise MascaretException('Reach name not found')
 
-#TODO: add section variables (see write_opt_file)
+# TODO: add section variables (see write_opt_file)
     def write_optfile_header(self, outfile, vars_indexes=None):
         """
         write header file
-        @param outfile: file open object
+
+        @param outfile (File) file open object
+        @param vars_indexes (list) List of var index to write If none given
+        writes them all
         """
         if vars_indexes is None:
             vars_indexes = self.varnames_dict['id']
         outfile.write('[variables]\n')
         for i in vars_indexes:
-            outfile.write('"{0}";"{1}";"{2}";0\n'.format(\
+            outfile.write('"{0}";"{1}";"{2}";0\n'.format(
                     self.varnames_dict['names'][i],
                     self.varnames_dict['abbr'][i],
                     self.varnames_dict['units'][i])
@@ -460,35 +618,40 @@ class MascaretFileParent:
 # TODO: add section variables (mean value for each section?)
     def write_optfile_frame(self, outfile, res, time):
         """
-           Write a one frame in opthyca file
-           @param res (OrderedDict) results data
-           @param time (float) time value
-           @return
+        Write a one frame in opthyca file
+
+        @param outfile (string) Name of output file
+        @param res (OrderedDict) results data
+        @param time (float) time value
+        @return
         """
         for key in res.keys():
             id = self.reaches[key].get_section_id_list()
             pk = self.reaches[key].get_section_pk_list()
             for id, pk, val in zip(id, pk, res[key]):
-                outfile.write('{0};"{1:2}";"{2:5}";{3};{4} \n'\
-                                 .format(time, key, id, pk,
-                                         ";".join([str(var) for var in val])))
+                outfile.write(
+                    '{0};"{1:2}";"{2:5}";{3};{4} \n'
+                    .format(time, key, id, pk, ";"
+                            .join([str(var) for var in val])))
 
-# TODO: add an option to write also section variables (mean value for each section?)
-    def write_optfile(self, outfile_name, times_indexes=None, vars_indexes=None, timecheck=False):
+# TODO: add an option to write also section variables
+# (mean value for each section?)
+    def write_optfile(self, outfile_name, times_indexes=None,
+                      vars_indexes=None, timecheck=False):
         """
         Write an output file in opthyca format
 
         @param outfile_name (string) output file name
         @param times_indexes (list) List of time step index
         @param vars_indexes (list) List of variable names
-        @return
+        @param timecheck (boolean) Tf True more verbose
         """
         if vars_indexes is None:
             vars_indexes = self.varnames_dict['id']
         if times_indexes is None:
-            times_indexes = [i for i in range(len(self.times))]
+            times_indexes = list(range(len(self.times)))
 
-        outfile = open(outfile_name, 'w')
+        outfile = open(outfile_name, access='w', encoding='utf-8')
         # write header
         self.write_optfile_header(outfile, vars_indexes)
         # write times
@@ -501,11 +664,11 @@ class MascaretFileParent:
 
         outfile.close()
 
-    def export_as_lig(self, file_name, record):
+    def export_as_lig(self, filename, record):
         """
         Write Mascaret restart file
 
-        @param file_name: (string) file name
+        @param filename: (string) file name
         @param record (int) time index
         @return
         """
@@ -524,28 +687,29 @@ class MascaretFileParent:
             i1i2.append(str(i1[b]))
             i1i2.append(str(i2[b]))
 
-        zref_pos = self.get_position_var_abbr('ZREF')
+        z_pos = self.get_position_var_abbr('Z')
         q_pos = self.get_position_var_abbr('Q')
-        res = self.get_values(record, [zref_pos, q_pos])
-        zref = np.array([])
+        res = self.get_values(record, [z_pos, q_pos])
+        z = np.array([])
         q = np.array([])
         for k in res.keys():
-            zref = np.concatenate((zref, res[k][:, 0]))
+            z = np.concatenate((z, res[k][:, 0]))
             q = np.concatenate((q, res[k][:, 1]))
 
         result = {}
         result['X'] = pk
-        result['Z'] = zref
+        result['Z'] = z
         result['Q'] = q
 
-        with open(file_name, 'w') as fich:
-            # Date is hardcoded, but it could be defined as: datetime.datetime.utcnow()
+        with open(filename, access='w', encoding='utf-8') as fich:
+            # Date is hardcoded, but it could be defined as:
+            # datetime.datetime.utcnow()
             fich.write(
                 'RESULTATS CALCUL,DATE : 01/01/1900 00:00\n')
             fich.write('FICHIER RESULTAT MASCARET{0}\n'.format(' ' * 47))
             fich.write('{0} \n'.format('-' * 71))
-            fich.write(' IMAX  = {0:4} NBBIEF= {1:3}\n'.format(str(nsection),
-                                                               str(self.nreaches)))
+            fich.write(' IMAX  = {0:4} NBBIEF= {1:3}\n'
+                       .format(str(nsection), str(self.nreaches)))
             chaine = [""]
             for k in range(0, len(i1i2), 10):
                 chaine.append('I1,I2 =')
@@ -559,7 +723,7 @@ class MascaretFileParent:
                 fich.write(' ' + k + '\n')
                 long = 0
                 for x in result[k]:
-                    fich.write('{:13.2f}'.format(x))
+                    fich.write('{:13.6f}'.format(x))
                     long += 1
                     if long == 5:
                         fich.write('\n')
@@ -570,8 +734,13 @@ class MascaretFileParent:
 
             fich.write(' FIN\n')
 
-#TODO: add section variables in the summary
+# TODO: add section variables in the summary
     def summary(self):
+        """
+        Method which return a summary of the class
+
+        @return txt (str) summary text
+        """
         txt = '~> %s\n' % self
         for _, reach in self.reaches.items():
             txt += '    - %s\n' % reach
@@ -586,10 +755,10 @@ class MascaretFileParent:
         if self.nsectionvar != 0:
             txt += '%i section variables:\n' % self.nsectionvar
             for i, varname in enumerate(self.section_varnames_dict['names']):
-                txt += '    - %s (%s) | %s \n' % (varname,
-                                                  self.section_varnames_dict['units'][i],
-                                                  self.section_varnames_dict['abbr'][i]
-                                                  )
+                txt += '    - %s (%s) | %s \n' %\
+                    (varname,
+                     self.section_varnames_dict['units'][i],
+                     self.section_varnames_dict['abbr'][i])
         txt += '%i temporal frames:\n' % self.ntimestep
         for i, time in enumerate(self.times):
             txt += '    - %i) %f\n' % (i, time)
@@ -597,25 +766,32 @@ class MascaretFileParent:
 
 
 class Opthyca(MascaretFileParent):
+    """
+    Child class of MascaretFileParent to handle Opthyca format files
+    """
 
-    def __init__(self, file_name, access='r', log_lvl='INFO'):
+    def __init__(self, filename, access='r', log_lvl='INFO'):
         """
         Constructor for Opthyca file
         Warning: Only suited for results at cross-sections (not adapted to
         Casier or Traceur outputs)
 
-        @param file_name Name of the file
-        @param access Access to the file ('r' for read 'w' for write)
+        @param filename (string) Name of the file
+        @param access (string) Access to the file ('r' for read 'w' for write)
+        @param log_lvl (string) Logger level
 
         Attributs specified to Opthyca:
         - fformat
         """
-        super().__init__(file_name, access=access, log_lvl=log_lvl)
+        super().__init__(filename, access=access, log_lvl=log_lvl)
         self.fformat = 'opt'
 
         self._read_variables()
 
     def read_line(self):
+        """
+        Method to read a line
+        """
         return self._file.readline().rstrip('\n')
 
     def _read_variables(self):
@@ -649,7 +825,8 @@ class Opthyca(MascaretFileParent):
             time_str, bief_name, _, pk_str, values_str = \
                     row.split(';', maxsplit=4)
         except ValueError:
-            self.error('Number of values (separated by a semi-colon) has to be more than 4!')
+            self.error('Number of values (separated by a semi-colon)\
+             has to be more than 4!')
 
         try:
             time = float(time_str)
@@ -658,7 +835,8 @@ class Opthyca(MascaretFileParent):
         except ValueError as e:
             self.error(str(e))
         if len(values) != self.nvar:
-            self.error('Number of values not coherent: %i instead of %i' % (len(values), self.nvar))
+            self.error('Number of values not coherent:\
+             %i instead of %i' % (len(values), self.nvar))
 
         return time, int(bief_name.strip().strip('\"')), section_pk, values
 
@@ -735,7 +913,7 @@ class Opthyca(MascaretFileParent):
 
         return np.array(all_values)
 
-#TODO: verify this is working even if reaches has not been initialized
+# TODO: verify this is working even if reaches has not been initialized
     def get_time(self):
         """
         Initialize time variables
@@ -755,23 +933,28 @@ class Opthyca(MascaretFileParent):
                     pos = self._file.tell()
                     line = self.read_line()
 
-class Rubens(MascaretFileParent):
 
-    def __init__(self, file_name, access='r', log_lvl='INFO'):
+class Rubens(MascaretFileParent):
+    """
+    Child class of MascaretFileParent to handle Rubens format files
+    """
+
+    def __init__(self, filename, access='r', log_lvl='INFO'):
         """
         Constructor for Rubens file
 
-        @param file_name Name of the file
-        @param access Access to the file ('r' for read 'w' for write)
+        @param filename (string) Name of the file
+        @param access (string) Access to the file ('r' for read 'w' for write)
+        @param log_lvl (string) Logger level
 
         Attributs specific to Rubens:
         - fformat
         - _size_file
         - _endians
         """
-        super().__init__(file_name, access=access + 'b', log_lvl=log_lvl)
+        super().__init__(filename, access=access + 'b', log_lvl=log_lvl)
         self.fformat = 'rub'
-        self._size_file = os.path.getsize(self.file_name)
+        self._size_file = os.path.getsize(self.filename)
         self._endians = ''
 
         self._read_binary_header()
@@ -789,7 +972,10 @@ class Rubens(MascaretFileParent):
     def _read_dico_variables():
         """Read variable information"""
         names, units, abbrs = [], [], []
-        with open(os.path.join(os.path.dirname(__file__), 'mascaret_variables_fr.csv'), newline='') as csvfile:
+        with open(os.path.join(os.path.dirname(__file__),
+                  'mascaret_variables_fr.csv'), newline='', access='r',
+                  encoding='utf-8')\
+                as csvfile:
             reader = csv.DictReader(csvfile, delimiter=';')
             for row in reader:
                 names.append(row['varname'])
@@ -810,8 +996,7 @@ class Rubens(MascaretFileParent):
             if len(check) != 0:
                 if check.decode('utf-8') == 'FIN':
                     break
-                else:
-                    variables.append(check.decode('utf-8'))
+                variables.append(check.decode('utf-8'))
         return variables
 
     def _read_binary_header(self):
@@ -849,14 +1034,16 @@ class Rubens(MascaretFileParent):
         # First Fortran tag
         self._file.read(4)
         # Read index of first section (or point) of reaches
-        self.reach_first_points = struct.unpack(fmt, self._file.read(self.nreaches*4))
+        self.reach_first_points = \
+            struct.unpack(fmt, self._file.read(self.nreaches*4))
         # Ending Fortran tag
         self._file.read(4)
 
         # First Fortran tag
         self._file.read(4)
         # Read index of last section (or point) of reaches
-        self.reach_last_points = struct.unpack(fmt, self._file.read(self.nreaches*4))
+        self.reach_last_points = \
+            struct.unpack(fmt, self._file.read(self.nreaches*4))
         # Ending Fortran tag
         self._file.read(4)
 
@@ -874,8 +1061,9 @@ class Rubens(MascaretFileParent):
 
         for _ in self.list_variables_ind:
             self._file.read(4)
-            self.res_variables_ind.append(list(struct.unpack(self.endians+str(self.nsections)+'f',
-                                                             self._file.read(4*self.nsections))))
+            self.res_variables_ind.append(
+                list(struct.unpack(self.endians+str(self.nsections)+'f',
+                     self._file.read(4*self.nsections))))
             self._file.read(4)
 
         self.list_variables_dep = self._read_binary_variables()
@@ -906,14 +1094,16 @@ class Rubens(MascaretFileParent):
 
         self._file.read(4)
         # Read  time independent variables
-        res_variables_ind = list(struct.unpack(self.endians + str(self.nsections) + 'f',
-                                               self._file.read(4 * self.nsections)))
+        res_variables_ind = \
+            list(struct.unpack(self.endians + str(self.nsections) + 'f',
+                 self._file.read(4 * self.nsections)))
         self._file.read(4)
 
         for i in range(self.nreaches):
             # Reaches ID starting at 1
             reach = Reach(i+1)
-            for j in range(self.reach_first_points[i], self.reach_last_points[i]+1):
+            for j in range(self.reach_first_points[i],
+                           self.reach_last_points[i]+1):
                 pk = res_variables_ind[j-1]
                 # Dictid header witonary index starting at 1
                 reach.add_section(Section(j, pk))
@@ -934,14 +1124,14 @@ class Rubens(MascaretFileParent):
             vars_indexes = self.varnames_dict['id']
 
         res = OrderedDict()
-        requested_time = self.times[record]
         self._file.seek(self._times_pos[record])
 
         values = []
         size = self.nvar - len(self.list_variables_ind)
         for i in range(size):
             self._file.read(4)
-            values.append((struct.unpack(self.endians + str(self.nsections)+'f', self._file.read(4*self.nsections))))
+            values.append((struct.unpack(self.endians + str(self.nsections) +
+                           'f', self._file.read(4*self.nsections))))
             self._file.read(4)
         for i, _ in enumerate(self.list_variables_ind):
             values.append(self.res_variables_ind[i][:])
@@ -953,7 +1143,8 @@ class Rubens(MascaretFileParent):
         for i, reach in self.reaches.items():
             # shift of index because reach dictionary keys begin at 1 and not 0
             res[reach.id] = \
-                np.asarray(all_values[self.reach_first_points[i-1]-1:self.reach_last_points[i-1]])
+                np.asarray(all_values[self.reach_first_points[i-1]-1:
+                                      self.reach_last_points[i-1]])
 
         return res
 
@@ -966,7 +1157,8 @@ class Rubens(MascaretFileParent):
         @param vars_indexes (list) List of variable names
         @return (numpy.array)
         """
-        #FIXME: not consistant with Opthyca.get_series => it should use reach_id argument
+        # FIXME: not consistant with Opthyca.get_series =>
+        # it should use reach_id argument
         if vars_indexes is None:
             vars_indexes = self.varnames_dict['id']
 
@@ -980,7 +1172,8 @@ class Rubens(MascaretFileParent):
                 var_ind_index = self.list_variables_ind.index(i)
 
                 for j in range(self.ntimestep):
-                    values.append(self.res_variables_ind[var_ind_index][section_id])
+                    values.append(
+                        self.res_variables_ind[var_ind_index][section_id])
 
             else:
                 var_dep_index = self.list_variables_dep.index(i)
@@ -1000,8 +1193,10 @@ class Rubens(MascaretFileParent):
 
     def get_time(self):
         self._move_to_first_frame()
-        binary_frame_size = (self.nvar - len(self.list_variables_ind)) * (self.nsections * 4 + 8) + 48
-        nb_frames = (self._size_file - self._position_first_frame) // binary_frame_size
+        binary_frame_size = (self.nvar - len(self.list_variables_ind)) *\
+            (self.nsections * 4 + 8) + 48
+        nb_frames = (self._size_file - self._position_first_frame) //\
+            binary_frame_size
         for i in range(nb_frames):
             # skipping 2 integers (frame number x2) + 3 fortran tags
             self._file.read(20)
@@ -1010,11 +1205,13 @@ class Rubens(MascaretFileParent):
             self._ntimestep += 1
             self._file.read(24)
             self._times_pos.append(self._file.tell())
-            self._file.seek(self._position_first_frame + (i + 1) * binary_frame_size)
+            self._file.seek(self._position_first_frame + (i + 1) *
+                            binary_frame_size)
         if nb_frames != self._ntimestep:
             self.error("Number of frames is not consistant!")
 
     def get_endians(self):
+        """Method to detect endians of the file"""
         pos_init = self._file.tell()
         self._file.seek(0)
 
@@ -1030,29 +1227,34 @@ class Rubens(MascaretFileParent):
         elif test_2 == 72:
             self._endians = '>'
         else:
-            self.error("Size and alignment of the binary file is neither little-endian nor big-endian"
+            self.error("Size and alignment of the binary file is neither\
+                        little-endian nor big-endian"
                        " or the file is an ASCII File")
 
         self._file.seek(pos_init)
 
-#Question Yoann: est-il possible de sortir cette classe pour la mettre dans un fichier courlis_file.py?
-class ListingCourlis(MascaretFileParent):
 
-    def __init__(self, file_name, access='r', log_lvl='INFO'):
+class ListingCourlis(MascaretFileParent):
+    """
+    Child class of MascaretFileParent to handle Listing Courlis format files
+    """
+
+    def __init__(self, filename, access='r', log_lvl='INFO'):
         """
         Constructor for ListingCourlis file
 
-        @param file_name Name of the file
-        @param access Access to the file ('r' for read 'w' for write)
+        @param filename (string) Name of the file
+        @param access (string) Access to the file ('r' for read 'w' for write)
+        @param log_lvl (string) Logger level
 
         Attributs specific to ListingCourlis:
         - fformat
         - _size_file
         - _endians
         """
-        super().__init__(file_name, access=access + 'b', log_lvl=log_lvl)
+        super().__init__(filename, access=access + 'b', log_lvl=log_lvl)
         self.fformat = 'listingcourlis'
-        self._size_file = os.path.getsize(self.file_name)
+        self._size_file = os.path.getsize(self.filename)
         self._endians = ''
         self._sediment_budget_string_res = "Sediment budget not yet extracted"
 
@@ -1071,7 +1273,9 @@ class ListingCourlis(MascaretFileParent):
     def _read_dico_variables():
         """Read variable information"""
         names, units, abbrs = [], [], []
-        with open(os.path.join(os.path.dirname(__file__), 'listing_courlis_variables_fr.csv'), newline='') as csvfile:
+        with open(os.path.join(os.path.dirname(__file__),
+                  'listing_courlis_variables_fr.csv'), newline='',
+                  encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=';')
             for row in reader:
                 names.append(row['varname'])
@@ -1080,7 +1284,10 @@ class ListingCourlis(MascaretFileParent):
         return names, abbrs, units
 
     def _read_first_time_step(self):
-        #first timestep pos (first timestep has a different format)
+        """
+        Reading first time step
+        """
+        # first timestep pos (first timestep has a different format)
         self._times_pos.append(self._file.tell())
 
         self._file.read(4)
@@ -1098,14 +1305,16 @@ class ListingCourlis(MascaretFileParent):
         try:
             # Initialize the shape of res
             self._file.read(4)
-            res = np.vstack((res, list(struct.unpack(self.endians+'17d', self._file.read(17*8)))))
+            res = np.vstack((res, list(struct.unpack(self.endians+'17d',
+                             self._file.read(17*8)))))
             self._file.read(4)
 
-            while res[count,1] != 3999:
+            while res[count, 1] != 3999:
 
                 file_pos = self._file.tell()
                 self._file.read(4)
-                res = np.vstack((res, list(struct.unpack(self.endians+'17d', self._file.read(17*8)))))
+                res = np.vstack((res, list(struct.unpack(self.endians+'17d',
+                                self._file.read(17*8)))))
                 self._file.read(4)
 
                 count += 1
@@ -1117,7 +1326,9 @@ class ListingCourlis(MascaretFileParent):
                     self.reach_first_points = [1]
                     self.reach_last_points = [count]
                     end = 1
-                    # first frame corresponds to the second timestep because the format of the first timestep is different (no sediment budget)
+                    # first frame corresponds to the second timestep
+                    # because the format of the first timestep is
+                    # different (no sediment budget)
                     self._position_first_frame = file_pos
                     self._section_idx = self._res[:, 1]
                     self._section_pk = self._res[:, 2]
@@ -1135,8 +1346,9 @@ class ListingCourlis(MascaretFileParent):
         frame_2_pos_end = self._file.tell()
         self._binary_frame_size = frame_2_pos_end - self._position_first_frame
         self._binary_sediment_budget_frame_size = frame_2_pos_end - \
-                                                  self._position_first_sediment_budget_frame
-        # It is minus 2 (and not 3 for 999, 1999 and 3999 rows, because Python idx begins to 0
+            self._position_first_sediment_budget_frame
+        # It is minus 2 (and not 3 for 999, 1999 and 3999 rows,
+        # because Python idx begins to 0
         self.nlayers = count - self._idx_first_sediment_budget_frame - 2
 
         try:
@@ -1151,17 +1363,16 @@ class ListingCourlis(MascaretFileParent):
                                   'ListingCourlis_unit_unknown_' + str(i),
                                   'ListingCourlis_short_name_unknown_'+str(i))
 
-
     def get_reaches(self):
         """Read geometry"""
 
-        #Only one reach in Courlis
+        # Only one reach in Courlis
         reach = Reach(1)
-        for i in range(len(self._section_idx)):
+        for i, sec in enumerate(self._section_idx):
             # Dictionary index starting at 1
             reach.add_section(
                               Section(
-                                      self._section_idx[i],
+                                      sec,
                                       self._section_pk[i]
                                      )
                              )
@@ -1180,21 +1391,21 @@ class ListingCourlis(MascaretFileParent):
             vars_indexes = self.varnames_dict['id']
 
         res = OrderedDict()
-        requested_time = self.times[record]
         self._file.seek(self._times_pos[record])
 
         values = []
         for i in range(self.nsections):
             self._file.read(4)
-            values.append((struct.unpack(self.endians + '17d', self._file.read(8*17))))
+            values.append((
+                struct.unpack(self.endians + '17d', self._file.read(8*17))))
             self._file.read(4)
 
         values = np.array(values).T
-        values = values[3:,:]
+        values = values[3:, :]
         values = np.insert(
                            values,
                            14,
-                           values[2,:] * values[3,:],
+                           values[2, :] * values[3, :],
                            axis=0
                            )
         all_values = []
@@ -1204,13 +1415,15 @@ class ListingCourlis(MascaretFileParent):
         for i, reach in self.reaches.items():
             # shift of index because reach dictionary keys begin at 1 and not 0
             res[reach.id] = \
-                np.asarray(all_values[self.reach_first_points[i-1]-1:self.reach_last_points[i-1]])
+                np.asarray(all_values[self.reach_first_points[i-1]-1:
+                                      self.reach_last_points[i-1]])
 
         return res
 
     def get_series(self, reach_id, section_id, vars_indexes=None):
         """
-        Get values for all variables for a give reach index and a given section index
+        Get values for all variables for a give reach index and
+            a given section index
         @param reach_id (int) reach index
         @param section_id (int) section index
         @param vars_indexes (list) List of variable names
@@ -1229,7 +1442,8 @@ class ListingCourlis(MascaretFileParent):
 
     def get_time(self):
         self._move_to_first_frame()
-        nb_frames = (self._size_file - self._position_first_frame) // self._binary_frame_size
+        nb_frames = (self._size_file - self._position_first_frame) //\
+            self._binary_frame_size
 
         self._times.append(self._first_timestep)
         self._ntimestep += 1
@@ -1238,19 +1452,29 @@ class ListingCourlis(MascaretFileParent):
             self._times_pos.append(self._file.tell())
 
             self._file.read(4)
-            res_first_section = list(struct.unpack(self.endians+'17d', self._file.read(17*8)))
+            res_first_section = list(struct.unpack(self.endians+'17d',
+                                                   self._file.read(17*8)))
             self._file.read(4)
 
             if res_first_section[0] == self._times[i-1]:
                 res_first_section[0] += 0.000001
-                self.logger.warning(' Two timesteps, n°{} and n°{}, are the same (often the case for the two first timesteps with sarap)'
-                                    ', the second has been augmented of +1.e-6s'.format(i, i+1))
+                self.logger.warning(' Two timesteps, n°{} and n°{}, are the\
+                same (often the case for the two first timesteps with sarap)'
+                                    ', the second has been augmented\
+                                     of +1.e-6s'.format(i, i+1))
 
             self._times.append(res_first_section[0])
             self._ntimestep += 1
-            self._file.seek(self._position_first_frame + (i + 1) * self._binary_frame_size)
+            self._file.seek(self._position_first_frame + (i + 1) *
+                            self._binary_frame_size)
 
     def sediment_budget(self, pandas=False):
+        """
+        Method to generate the sediment budget
+
+        @param pandas (bool) option activated when the sediment budget is
+        generating with Pandas
+        """
 
         sediment_budget = []
 
@@ -1264,7 +1488,8 @@ class ListingCourlis(MascaretFileParent):
 
             for j in range(self.nlayers + 3):
                 self._file.read(4)
-                sediment_budget.append(list(struct.unpack(self.endians+'17d', self._file.read(17*8))))
+                sediment_budget.append(list(struct.unpack(self.endians+'17d',
+                                       self._file.read(17*8))))
                 self._file.read(4)
 
         sediment_budget = np.array(sediment_budget)
@@ -1334,11 +1559,16 @@ class ListingCourlis(MascaretFileParent):
             total_temp = [
                         self.times[i+1],
                         sediment_budget[gap_2, 4],
-                        sediment_budget[gap_2 + 1, 2] + sediment_budget[gap_2 + 1, 3],
-                        sediment_budget[gap_2 + 1, 4] + sediment_budget[gap_2 + 1, 5],
-                        sediment_budget[gap_2 + 1, 6] + sediment_budget[gap_2 + 1, 7],
-                        sediment_budget[gap_2 + 1, 8] + sediment_budget[gap_2 + 1, 9],
-                        sediment_budget[gap_2 + 1, 10] + sediment_budget[gap_2 + 1, 11],
+                        sediment_budget[gap_2 + 1, 2] +
+                        sediment_budget[gap_2 + 1, 3],
+                        sediment_budget[gap_2 + 1, 4] +
+                        sediment_budget[gap_2 + 1, 5],
+                        sediment_budget[gap_2 + 1, 6] +
+                        sediment_budget[gap_2 + 1, 7],
+                        sediment_budget[gap_2 + 1, 8] +
+                        sediment_budget[gap_2 + 1, 9],
+                        sediment_budget[gap_2 + 1, 10] +
+                        sediment_budget[gap_2 + 1, 11],
                         sediment_budget[gap_2 + 1, 16]
                        ]
 
@@ -1365,14 +1595,19 @@ class ListingCourlis(MascaretFileParent):
                 print("Pandas module is not available")
                 print("Hence, returns objects are numpy array\n")
 
-                #return np.array(mud), np.array(sand), np.array(total)
+                # return np.array(mud), np.array(sand), np.array(total)
                 return sediment_budget
 
         else:
-            #return np.array(mud), np.array(sand), np.array(total)
+            # return np.array(mud), np.array(sand), np.array(total)
             return sediment_budget
 
     def export_sediment_budget_to_csv(self, outfile_name):
+        """
+        Generate the sediment budget into a csv file
+
+        @param outfile_name (str) Name of the csv file to write
+        """
         sediment_budget = self.sediment_budget()
         self._sediment_budget_string_res = ""
 
@@ -1383,65 +1618,115 @@ class ListingCourlis(MascaretFileParent):
 
             for j in range(self.nlayers):
                 string_layers += \
-                    "   Mass deposited in layer n° ;" + str(j + 1) + 11 * " " + ";" + \
-                    "{:16.3f}".format(sediment_budget[gap + j + 1, 3]) + ";" + " kg" + 10 * " " + ";" + \
-                    "{:16.3f}".format(sediment_budget[gap + j + 1, 4]) + ";" + " kg" + 10 * " " + ";" + \
-                    "{:16.3f}".format(sediment_budget[gap + j + 1, 5]) + ";" + " kg\n"
+                    "   Mass deposited in layer n° ;"\
+                    + str(j + 1) + 11 * " " + ";" + \
+                    "{:16.3f}".format(sediment_budget[gap + j + 1, 3]) +\
+                    ";" + " kg" + 10 * " " + ";" + \
+                    "{:16.3f}".format(sediment_budget[gap + j + 1, 4]) +\
+                    ";" + " kg" + 10 * " " + ";" + \
+                    "{:16.3f}".format(sediment_budget[gap + j + 1, 5]) +\
+                    ";" + " kg\n"
 
             self._sediment_budget_string_res += \
-                "Timestep : ; {:16.8f}".format(self.times[i + 1]) + ";" + (20 + 9) * " " + \
-                "Mud" + ";" + (16 + 10) * " " + "Sand" + (10 + 10) * " " + ";" + "Total\n\n" + \
+                "Timestep : ; {:16.8f}".format(self.times[i + 1]) +\
+                ";" + (20 + 9) * " " + \
+                "Mud" + ";" + (16 + 10) * " " + "Sand" + (10 + 10) *\
+                " " + ";" + "Total\n\n" + \
                 "   Erosion flux in the bief            " + 4 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap, 2]) + ";" + " kg/s" + 8 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap, 3]) + ";" + " kg/s\n" + \
+                "{:16.3f}".format(sediment_budget[gap, 2]) + ";" +\
+                " kg/s" + 8 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap, 3]) + ";" +\
+                " kg/s\n" + \
                 "   Sediment flux entering in the bief  " + 4 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap, 4]) + ";" + " kg/s" + 8 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap, 5]) + ";" + " kg/s\n" + \
-                "   Sediment flux leaving out the bief  " + 4 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap, 6]) + ";" + " kg/s" + 8 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap, 7]) + ";" + " kg/s\n\n" \
-                " -From t = 0 s to t = {:16.8f} s\n\n".format(self.times[i + 1]) + \
+                "{:16.3f}".format(sediment_budget[gap, 4]) + ";" +\
+                " kg/s" + 8 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap, 5]) + ";" +\
+                " kg/s\n" + \
+                "   Sediment flux leaving out the bief  " + 4 *\
+                " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap, 6]) + ";" +\
+                " kg/s" + 8 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap, 7]) + ";"\
+                + " kg/s\n\n" \
+                " -From t = 0 s to t = {:16.8f} s\n\n"\
+                .format(self.times[i + 1]) + \
                 string_layers + \
                 "   Sediment mass in suspension         " + 4 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2, 2]) + ";" + " kg" + 10 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2, 3]) + ";" + " kg" + 10 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2, 4]) + ";" + " kg\n" + \
-                "   Relative error for mass budget      " + 4 * " " + ";" + \
-                "{:16.8f}".format(sediment_budget[gap_2, 5]) + ";" + 13 * " " + ";" +  \
-                "{:16.8f}".format(sediment_budget[gap_2, 6]) + ";\n\n" + " -Global budget mass\n\n" + \
-                "   Initial sediment mass in suspension in the bief   " + 4 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 2]) + ";" + " kg" + 10 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 3]) + ";" + " kg" + 10 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 2] + sediment_budget[gap_2 + 1, 3]) + ";" + " kg\n" + \
+                "{:16.3f}".format(sediment_budget[gap_2, 2]) + ";" +\
+                " kg" + 10 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap_2, 3]) +\
+                ";" + " kg" + 10 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap_2, 4]) +\
+                ";" + " kg\n" + \
+                "   Relative error for mass budget      " + 4 *\
+                " " + ";" + \
+                "{:16.8f}".format(sediment_budget[gap_2, 5]) + ";"\
+                + 13 * " " + ";" +  \
+                "{:16.8f}".format(sediment_budget[gap_2, 6]) + ";\n\n" +\
+                " -Global budget mass\n\n" + \
+                "   Initial sediment mass in suspension in the bief   " + 4\
+                * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 2]) + ";" +\
+                " kg" + 10 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 3]) + ";" +\
+                " kg" + 10 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 2] +
+                                  sediment_budget[gap_2 + 1, 3]) +\
+                ";" + " kg\n" + \
                 "   Sediment mass entering in the bief  " + 4 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 4]) + ";" + " kg" + 10 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 5]) + ";" + " kg" + 10 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 4] + sediment_budget[gap_2 + 1, 5]) + ";" + " kg\n" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 4]) +\
+                ";" + " kg" + 10 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 5]) + ";"\
+                + " kg" + 10 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 4] +
+                                  sediment_budget[gap_2 + 1, 5]) +\
+                ";" + " kg\n" + \
                 "   Sediment mass leaving out the bief  " + 4 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 6]) + ";" + " kg" + 10 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 7]) + ";" + " kg" + 10 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 6] + sediment_budget[gap_2 + 1, 7]) + ";" + " kg\n" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 6]) + ";" +\
+                " kg" + 10 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 7]) + ";"\
+                + " kg" + 10 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 6] +
+                                  sediment_budget[gap_2 + 1, 7]) +\
+                ";" + " kg\n" + \
                 "   Sediment mass in suspension         " + 4 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 8]) + ";" + " kg" + 10 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 9]) + ";" + " kg" + 10 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 8] + sediment_budget[gap_2 + 1, 9]) + ";" + " kg\n" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 8]) + ";" +\
+                " kg" + 10 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 9]) + ";"\
+                + " kg" + 10 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 8] +
+                                  sediment_budget[gap_2 + 1, 9]) + ";"\
+                + " kg\n" + \
                 "   Deposited sediment mass in the bief " + 4 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 10]) + ";" + " kg" + 10 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 11]) + ";" + " kg" + 10 * " " + ";" + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 10] + sediment_budget[gap_2 + 1, 11]) + ";" + " kg\n" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 10]) + ";" +\
+                " kg" + 10 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 11]) + ";"\
+                + " kg" + 10 * " " + ";" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 10] +
+                                  sediment_budget[gap_2 + 1, 11]) + ";"\
+                + " kg\n" + \
                 "   Error on mass                       " + 4 * " " + ";" + \
-                "{:16.5f}".format(sediment_budget[gap_2 + 1, 12]) + ";" + " kg" + 10 * " " + ";" + \
-                "{:16.5f}".format(sediment_budget[gap_2 + 1, 13]) + ";" + " kg" + 10 * " " + ";\n" + \
+                "{:16.5f}".format(sediment_budget[gap_2 + 1, 12]) + ";" +\
+                " kg" + 10 * " " + ";" + \
+                "{:16.5f}".format(sediment_budget[gap_2 + 1, 13]) + ";" +\
+                " kg" + 10 * " " + ";\n" + \
                 "   Global relative error               " + 4 * " " + ";" + \
-                "{:16.8f}".format(sediment_budget[gap_2 + 1, 14]) + ";" + 13 * " " + ";" +  \
+                "{:16.8f}".format(sediment_budget[gap_2 + 1, 14]) + ";" +\
+                13 * " " + ";" +  \
                 "{:16.8f}".format(sediment_budget[gap_2 + 1, 15]) + ";\n\n" + \
-                " -Volume sediment variation from t = 0 s : ;{:16.3f}; m3\n\n\n".format(sediment_budget[gap_2 + 1, 16])
+                " -Volume sediment variation from t = 0 s :\
+                    ;{:16.3f}; m3\n\n\n".format(sediment_budget[gap_2 + 1, 16])
 
-        outfile = open(outfile_name, 'w')
+        outfile = open(outfile_name, 'w', encoding='utf-8')
         outfile.write(self._sediment_budget_string_res)
         outfile.close()
 
     def export_sediment_budget_to_txt(self, outfile_name):
+        """
+        Method to write sediment budget to an ASCII file
+
+        @param outfile_name (str) Name of the ASCII file to write
+        """
         sediment_budget = self.sediment_budget()
         self._sediment_budget_string_res = ""
 
@@ -1452,65 +1737,101 @@ class ListingCourlis(MascaretFileParent):
 
             for j in range(self.nlayers):
                 string_layers += \
-                    "   Mass deposited in layer n° " + str(j + 1) + 12 * " " + \
-                    "{:16.3f}".format(sediment_budget[gap + j + 1, 3]) + " kg" + 10 * " " + \
-                    "{:16.3f}".format(sediment_budget[gap + j + 1, 4]) + " kg" + 10 * " " + \
-                    "{:16.3f}".format(sediment_budget[gap + j + 1, 5]) + " kg\n"
+                    "   Mass deposited in layer n° " + str(j + 1) + 12 * " " +\
+                    "{:16.3f}".format(sediment_budget[gap + j + 1, 3]) +\
+                    " kg" + 10 * " " + \
+                    "{:16.3f}".format(sediment_budget[gap + j + 1, 4]) +\
+                    " kg" + 10 * " " + \
+                    "{:16.3f}".format(sediment_budget[gap + j + 1, 5]) +\
+                    " kg\n"
 
             self._sediment_budget_string_res += \
-                "Timestep :  {:16.8f}".format(self.times[i + 1]) + (20 + 9) * " " + \
-                "Mud" + (16 + 10) * " " + "Sand" + (10 + 10) * " " + "Total\n\n" + \
+                "Timestep :  {:16.8f}"\
+                .format(self.times[i + 1]) + (20 + 9) * " " + \
+                "Mud" + (16 + 10) * " " + "Sand" + (10 + 10) * " " +\
+                "Total\n\n" + \
                 "   Erosion flux in the bief            " + 4 * " " + \
-                "{:16.3f}".format(sediment_budget[gap, 2]) + " kg/s" + 8 * " " + \
+                "{:16.3f}".format(sediment_budget[gap, 2])\
+                + " kg/s" + 8 * " " + \
                 "{:16.3f}".format(sediment_budget[gap, 3]) + " kg/s\n" + \
                 "   Sediment flux entering in the bief  " + 4 * " " + \
-                "{:16.3f}".format(sediment_budget[gap, 4]) + " kg/s" + 8 * " " + \
+                "{:16.3f}".format(sediment_budget[gap, 4]) +\
+                " kg/s" + 8 * " " + \
                 "{:16.3f}".format(sediment_budget[gap, 5]) + " kg/s\n" + \
                 "   Sediment flux leaving out the bief  " + 4 * " " + \
-                "{:16.3f}".format(sediment_budget[gap, 6]) + " kg/s" + 8 * " " + \
+                "{:16.3f}".format(sediment_budget[gap, 6]) +\
+                " kg/s" + 8 * " " + \
                 "{:16.3f}".format(sediment_budget[gap, 7]) + " kg/s\n\n" \
-                " -From t = 0 s to t = {:16.8f} s\n\n".format(self.times[i + 1]) + \
+                " -From t = 0 s to t = {:16.8f} s\n\n"\
+                .format(self.times[i + 1]) + \
                 string_layers + \
                 "   Sediment mass in suspension         " + 4 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2, 2]) + " kg" + 10 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2, 3]) + " kg" + 10 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2, 4]) + " kg\n" + \
+                "{:16.3f}".format(sediment_budget[gap_2, 2]) +\
+                " kg" + 10 * " " + \
+                "{:16.3f}".format(sediment_budget[gap_2, 3]) +\
+                " kg" + 10 * " " + \
+                "{:16.3f}".format(sediment_budget[gap_2, 4]) +\
+                " kg\n" + \
                 "   Relative error for mass budget      " + 4 * " " + \
                 "{:16.8f}".format(sediment_budget[gap_2, 5]) + 13 * " " +  \
-                "{:16.8f}".format(sediment_budget[gap_2, 6]) + "\n\n" + " -Global budget mass\n\n" + \
-                "   Initial sediment mass in suspension in the bief   " + 4 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 2]) + " kg" + 10 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 3]) + " kg" + 10 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 2] + sediment_budget[gap_2 + 1, 3]) + " kg\n" + \
+                "{:16.8f}".format(sediment_budget[gap_2, 6]) + "\n\n" +\
+                " -Global budget mass\n\n" + \
+                "   Initial sediment mass in suspension in the bief   "\
+                + 4 * " " + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 2])\
+                + " kg" + 10 * " " + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 3])\
+                + " kg" + 10 * " " + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 2]
+                                  + sediment_budget[gap_2 + 1, 3])\
+                + " kg\n" + \
                 "   Sediment mass entering in the bief  " + 4 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 4]) + " kg" + 10 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 5]) + " kg" + 10 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 4] + sediment_budget[gap_2 + 1, 5]) + " kg\n" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 4])\
+                + " kg" + 10 * " " + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 5])\
+                + " kg" + 10 * " " + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 4]
+                                  + sediment_budget[gap_2 + 1, 5])\
+                + " kg\n" + \
                 "   Sediment mass leaving out the bief  " + 4 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 6]) + " kg" + 10 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 7]) + " kg" + 10 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 6] + sediment_budget[gap_2 + 1, 7]) + " kg\n" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 6]) +\
+                " kg" + 10 * " " + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 7]) +\
+                " kg" + 10 * " " + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 6] +
+                                  sediment_budget[gap_2 + 1, 7]) + " kg\n" + \
                 "   Sediment mass in suspension         " + 4 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 8]) + " kg" + 10 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 9]) + " kg" + 10 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 8] + sediment_budget[gap_2 + 1, 9]) + " kg\n" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 8]) +\
+                " kg" + 10 * " " + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 9]) +\
+                " kg" + 10 * " " + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 8] +
+                                  sediment_budget[gap_2 + 1, 9]) + " kg\n" + \
                 "   Deposited sediment mass in the bief " + 4 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 10]) + " kg" + 10 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 11]) + " kg" + 10 * " " + \
-                "{:16.3f}".format(sediment_budget[gap_2 + 1, 10] + sediment_budget[gap_2 + 1, 11]) + " kg\n" + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 10]) +\
+                " kg" + 10 * " " + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 11]) +\
+                " kg" + 10 * " " + \
+                "{:16.3f}".format(sediment_budget[gap_2 + 1, 10] +
+                                  sediment_budget[gap_2 + 1, 11]) + " kg\n" + \
                 "   Error on mass                       " + 4 * " " + \
-                "{:16.5f}".format(sediment_budget[gap_2 + 1, 12]) + " kg" + 10 * " " + \
-                "{:16.5f}".format(sediment_budget[gap_2 + 1, 13]) + " kg" + 10 * " " + "\n" + \
+                "{:16.5f}".format(sediment_budget[gap_2 + 1, 12]) + \
+                " kg" + 10 * " " + \
+                "{:16.5f}".format(sediment_budget[gap_2 + 1, 13]) + \
+                " kg" + 10 * " " + "\n" + \
                 "   Global relative error               " + 4 * " " + \
-                "{:16.8f}".format(sediment_budget[gap_2 + 1, 14]) + 13 * " " +  \
+                "{:16.8f}".format(sediment_budget[gap_2 + 1, 14]) + \
+                13 * " " +  \
                 "{:16.8f}".format(sediment_budget[gap_2 + 1, 15]) + "\n\n" + \
-                " -Volume sediment variation from t = 0 s : {:16.3f} m3\n\n\n".format(sediment_budget[gap_2 + 1, 16])
+                " -Volume sediment variation from t = 0 s : {:16.3f} m3\n\n\n"\
+                .format(sediment_budget[gap_2 + 1, 16])
 
-        outfile = open(outfile_name, 'w')
+        outfile = open(outfile_name, 'w', encoding='utf-8')
         outfile.write(self._sediment_budget_string_res)
         outfile.close()
 
     def get_endians(self):
+        """Method to detect endians of the file"""
         pos_init = self._file.tell()
         self._file.seek(0)
 
@@ -1526,26 +1847,31 @@ class ListingCourlis(MascaretFileParent):
         elif test_2 == 136:
             self._endians = '>'
         else:
-            self.error("Size and alignment of the binary file is neither little-endian nor big-endian"
+            self.error("Size and alignment of the binary file is neither\
+                        little-endian nor big-endian"
                        " or the file is an ASCII File")
 
         self._file.seek(pos_init)
 
 
 class ptravers(MascaretFileParent):
+    """
+    Child class of MascaretFileParent to handle ptravers format files
+    """
 
-    def __init__(self, file_name, access='r', log_lvl='INFO'):
+    def __init__(self, filename, access='r', log_lvl='INFO'):
         """
         Constructor for ptravers Courlis result file
 
-        @param file_name Name of the file
-        @param access Access to the file ('r' for read 'w' for write)
+        @param filename (string) Name of the file
+        @param access (string) Access to the file ('r' for read 'w' for write)
+        @param log_lvl (string) Logger level
 
         Attributs specified to ptravers:
         - fformat
 
         """
-        super().__init__(file_name, access=access, log_lvl=log_lvl)
+        super().__init__(filename, access=access, log_lvl=log_lvl)
         self.fformat = 'ptravers'
         self._section_pk = []
 
@@ -1556,6 +1882,9 @@ class ptravers(MascaretFileParent):
         self._read_ptravers_header()
 
     def read_line(self):
+        """
+        Method to read a line
+        """
         return self._file.readline().rstrip('\n')
 
     def _read_ptravers_header(self):
@@ -1580,12 +1909,12 @@ class ptravers(MascaretFileParent):
         self._numbersectionvar = int(self.read_line().split()[-1:][0])
 
         # ptravers file does not contains variable long names
-        ptravers_var_dict = {'DXSC':'Profile abscissa',
-                             'ZREF':'Elevation',
-                             'ZDUR':'Hard bottom elevation',
-                             'TauH':'Local shear stress',
-                             'TauE':'Effective shear stress',
-                             'Ceq':'Equilibrium sand concentration'}
+        ptravers_var_dict = {'DXSC': 'Profile abscissa',
+                             'ZREF': 'Elevation',
+                             'ZDUR': 'Hard bottom elevation',
+                             'TauH': 'Local shear stress',
+                             'TauE': 'Effective shear stress',
+                             'Ceq': 'Equilibrium sand concentration'}
 
         # read name of variables
         layer_number = 0
@@ -1596,7 +1925,7 @@ class ptravers(MascaretFileParent):
             unit = line[10:]
             unit = unit.strip()
 
-            varname = ptravers_var_dict[var_abbr]
+            varname = ptravers_var_dict[var_abbr[:4]]
             if var_abbr == 'ZREF':
                 if layer_number == 0:
                     var_abbr = 'ZBOT'
@@ -1611,7 +1940,7 @@ class ptravers(MascaretFileParent):
     def get_reaches(self):
         """Read geometry for ptravers"""
 
-        #Only one reach in Courlis
+        # Only one reach in Courlis
         reach = Reach(1)
         self._file.seek(self._end_header)
 
@@ -1643,10 +1972,12 @@ class ptravers(MascaretFileParent):
                    section_vars_indexes=None):
         """
         Get values for all variables for a give time index
-        and also, for all section variable for
+        and also, for all section variable for a give list of indexes
 
         @param record (int) time index
         @param vars_indexes (list) List of variable names
+        @param get_section_values (boolean) If True get section values as well
+        @param section_vars_indexes (list) List of section var index to extract
         @return (dict) dict of 2D array with reach.id as key
         """
         if vars_indexes is None:
@@ -1661,7 +1992,6 @@ class ptravers(MascaretFileParent):
         res = OrderedDict()
         all_values = []
 
-        requested_time = self.times[record]
         self._file.seek(self._times_pos[record])
 
         # skip time in the first X-profile header
@@ -1678,7 +2008,8 @@ class ptravers(MascaretFileParent):
             left_wet_abscissa = float(line.split()[-2:][0])
             right_wet_abscissa = float(line.split()[-1:][0])
 
-            all_values.append([free_surface, left_wet_abscissa, right_wet_abscissa])
+            all_values.append([free_surface, left_wet_abscissa,
+                               right_wet_abscissa])
 
             if get_section_values:
                 profile_res = []
@@ -1701,14 +2032,18 @@ class ptravers(MascaretFileParent):
 
             for i in range(self.nsections):
                 selected_values.append(all_values[:, i][vars_indexes])
-                selected_section_values.append(all_section_values[i][section_vars_indexes])
+                selected_section_values.append(
+                    all_section_values[i][section_vars_indexes])
 
             for i, reach in self.reaches.items():
-                # shift of index because reach dictionary keys begin at 1 and not 0
+                # shift of index because reach dictionary keys
+                # begin at 1 and not 0
                 res[reach.id] = \
-                    np.asarray(selected_values[self.reach_first_points[i - 1] - 1:self.reach_last_points[i - 1]])
+                    np.asarray(selected_values[self.reach_first_points[i - 1]
+                               - 1:self.reach_last_points[i - 1]])
                 res_section[reach.id] = \
-                    selected_section_values[self.reach_first_points[i - 1] - 1:self.reach_last_points[i - 1]]
+                    selected_section_values[self.reach_first_points[i - 1]
+                                            - 1:self.reach_last_points[i - 1]]
 
             return res, res_section
 
@@ -1719,15 +2054,18 @@ class ptravers(MascaretFileParent):
                 selected_values.append(all_values[:, i][vars_indexes])
 
             for i, reach in self.reaches.items():
-                # shift of index because reach dictionary keys begin at 1 and not 0
+                # shift of index because reach dictionary keys
+                # begin at 1 and not 0
                 res[reach.id] = \
-                    np.asarray(selected_values[self.reach_first_points[i-1]-1:self.reach_last_points[i-1]])
+                    np.asarray(selected_values[self.reach_first_points[i-1]-1:
+                                               self.reach_last_points[i-1]])
 
             return res
 
     def get_series(self, reach_id, section_id, vars_indexes=None):
         """
-        Get values for all variables for a give reach index and a given section index
+        Get values for all variables for a give reach index and
+            a given section index
         @param reach_id (int) reach index
         @param section_id (int) section index
         @param vars_indexes (list) List of variable names
@@ -1744,22 +2082,24 @@ class ptravers(MascaretFileParent):
 
         return np.array(all_values)
 
-    def get_profile_series(self, reach_id, section_id, vars_section_indexes=None):
+    def get_profile_series(self, reach_id, section_id,
+                           vars_section_indexes=None):
         """
-        Get values for all section variables for a give reach index and a given section index
+        Get values for all section variables for a give reach index
+            and a given section index
         @param reach_id (int) reach index
         @param section_id (int) section index
         @param vars_section_indexes (list) List of section variable names
         @return (numpy.array)
         """
-        pass
 
     def get_time(self):
         """
         Initialize time variables
         """
 
-        # if reaches has not be initialized, it is does before seeking in the file
+        # if reaches has not be initialized, it is does before seeking
+        # in the file
         # otherwise everything is shifted
         reaches = self.reaches.items()
         self._file.seek(self._end_header)
@@ -1780,52 +2120,72 @@ class ptravers(MascaretFileParent):
             pos = self._file.tell()
             line = self.read_line()
 
-def MascaretFile(file_name, fformat=None, access='r', log_lvl='INFO'):
+
+def MascaretFile(filename, fformat=None, access='r', log_lvl='INFO'):
     """
-    @param fformat File format ('opt' or 'rub'), optional (detection from extension)
-    @param access Access to the file ('r' for read 'w' for write)
+    Generic wrapper of mascaret classes will return the class assocaited with
+    fformat
+
+    @param filename (string) Path of the file
+    @param fformat (string) File format ('opt', 'listingcourlis', 'ptravers',
+    'rub'), optional (detection from extension)
+    @param access (string) Access to the file ('r' for read 'w' for write)
+    @param log_lvl (string) Logger level
+
+    @returns Class structrure
     """
     # Determine file format from file extension
-    if fformat == None:
-        fformat = file_name.split(".")[-1]
+    if fformat is None:
+        fformat = filename.split(".")[-1]
 
     if access != 'r':
         raise NotImplementedError('Write access is not supported yet!')
     if fformat == 'opt':
-        return Opthyca(file_name, access=access, log_lvl=log_lvl)
-    elif fformat == 'rub':
-        return Rubens(file_name, access=access, log_lvl=log_lvl)
-    elif fformat == 'listingcourlis':
-        return ListingCourlis(file_name, access=access, log_lvl=log_lvl)
-    elif fformat == 'ptravers':
-        return ptravers(file_name, access=access, log_lvl=log_lvl)
-    else:
-        raise FileNotFoundError('The format of the file is not recognized, '
-                                'please use "fformat" argument to indicate your file format')
+        return Opthyca(filename, access=access, log_lvl=log_lvl)
+    if fformat == 'rub':
+        return Rubens(filename, access=access, log_lvl=log_lvl)
+    if fformat == 'listingcourlis':
+        return ListingCourlis(filename, access=access, log_lvl=log_lvl)
+    if fformat == 'ptravers':
+        return ptravers(filename, access=access, log_lvl=log_lvl)
+
+    raise FileNotFoundError(
+            'The format of the file "{}" is not recognized, '
+            'please use "fformat" argument to indicate your file format'
+            .format(fformat))
 
 
 if __name__ == '__main__':
     # Parse every Mascaret Opthyca and Rubens validation files
-    # Parse every Courlis Opthyca, Rubens, ListingCourlis and ptravers validation files
+    # Parse every Courlis Opthyca, Rubens, ListingCourlis
+    # and ptravers validation files
     from utils.files import recursive_glob
     try:
-        rub_files = recursive_glob(os.path.join(os.environ['HOMETEL'], 'examples', 'mascaret'), '*.rub')
-        opt_files = recursive_glob(os.path.join(os.environ['HOMETEL'], 'examples', 'mascaret'), '*.opt')
-        LC_files = recursive_glob(os.path.join(os.environ['HOMETEL'], 'examples', 'courlis'), '*.listingcourlis')
-        PT_files = recursive_glob(os.path.join(os.environ['HOMETEL'], 'examples', 'courlis'), '*.ptravers')
+        rub_files = recursive_glob(
+            os.path.join(os.environ['HOMETEL'], 'examples', 'mascaret'),
+            '*.rub')
+        opt_files = recursive_glob(
+            os.path.join(os.environ['HOMETEL'], 'examples', 'mascaret'),
+            '*.opt')
+        LC_files = recursive_glob(os.path.join(os.environ['HOMETEL'],
+                                  'examples', 'courlis'), '*.listingcourlis')
+        PT_files = recursive_glob(os.path.join(os.environ['HOMETEL'],
+                                  'examples', 'courlis'), '*.ptravers')
 
         for file_name in sorted(rub_files + opt_files + LC_files + PT_files):
             if 'sarap.rub' not in file_name:
                 masc_file = MascaretFile(file_name)
             else:
-                print('Ascii Rubens used for SARAP kernel output is not yet handled')
+                print('Ascii Rubens used for SARAP kernel\
+                    output is not yet handled')
                 print('So, ', file_name, ' is not tested \n')
 
             # Display infos about geometry, variables and frames
             print(file_name)
             print(masc_file.summary())
 
-            # Call get_values on first frame to display maximum value for all reach and variables
+            # Call get_values on first frame to display
+            # maximum value for all reach and variables
             # values = masc_file.get_values(0)
             # for reach_id, array in masc_file.reaches.items():
             #     print(np.amax(values[reach_id], axis=0))

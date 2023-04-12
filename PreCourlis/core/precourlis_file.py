@@ -11,8 +11,9 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
 
-from PreCourlis.core import is_null, Point, Reach, Section
+from PreCourlis.core import is_null, to_float
 from PreCourlis.core.utils import color_to_hex
+from PreCourlis.lib.mascaret.mascaret_file import Reach, Section
 
 DEFAULT_LAYER_COLOR = QColor("#7f7f7f")
 
@@ -68,28 +69,37 @@ class PreCourlisFileLine(PreCourlisFileBase):
         # Take only the first parts (QgsMultiLineString => QgsLineString)
         line = next(f.geometry().constParts()).clone()
         points = line.points()
-        section.set_points(
+
+        import numpy as np
+        section.nb_points = len(points)
+        section.x = np.array([p.x() for p in points])
+        section.y = np.array([p.y() for p in points])
+        section.z = np.array(
             [
-                Point(
-                    x=p[0].x(),
-                    y=p[0].y(),
-                    z=p[1],
-                    d=p[2],
-                )
-                for p in zip(
-                    points,
-                    split_attribute(f.attribute("zfond"), len(points)),
-                    split_attribute(f.attribute("abs_lat"), len(points)),
-                )
+                np.nan if is_null(z) else to_float(z)
+                for z in split_attribute(f.attribute("zfond"), len(points))
             ]
         )
-        section.topo_bats = split_attribute(f.attribute("topo_bat"), len(points))
-        section.set_layers(
-            self.layers(),
+        section.distances = np.array(
             [
-                split_attribute(f.attribute(layer), len(points))
-                for layer in self.layers()
-            ],
+                to_float(d)
+                for d in split_attribute(f.attribute("abs_lat"), len(points))
+            ]
+        )
+        section.topo_bath = split_attribute(f.attribute("topo_bat"), len(points))
+
+        layer_names = self.layers()
+        layers_elev = [
+            split_attribute(f.attribute(layer), len(points))
+            for layer in self.layers()
+        ]
+        section.nlayers = len(layer_names)
+        section.layer_names = layer_names
+        section.layers_elev = np.array(
+            [
+                np.array([np.nan if is_null(v) else to_float(v) for v in values])
+                for values in layers_elev
+            ]
         )
 
         return section
@@ -129,13 +139,16 @@ class PreCourlisFileLine(PreCourlisFileBase):
             "axis_y": section.axis[1],
             "layers": ",".join(section.layer_names),
             "p_id": ",".join([str(i) for i in range(0, len(section.distances))]),
-            "topo_bat": ",".join(section.topo_bats),
+            "topo_bat": ",".join(section.topo_bath),
             "abs_lat": ",".join([str(d) for d in section.distances]),
             "zfond": ",".join([str(z) for z in section.z]),
         }
         for i, layer in enumerate(section.layer_names):
             attributes[layer] = ",".join([str(z) for z in section.layers_elev[i]])
-        return {fields.indexFromName(name): value for name, value in attributes.items()}
+        return {
+            fields.indexFromName(name): value
+            for name, value in attributes.items()
+        }
 
     def update_feature(self, fid, section, title):
         self._layer.beginEditCommand(title)
@@ -149,7 +162,6 @@ class PreCourlisFileLine(PreCourlisFileBase):
         reach = Reach(
             my_id=0,
             name=name or self._layer.name(),
-            crs_id=self._layer.crs().authid(),
         )
         for section in self.get_sections():
             reach.add_section(section)

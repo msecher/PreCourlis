@@ -14,7 +14,9 @@ iface.activeLayer.return_value = None
 qgis_utils.iface = iface
 
 DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
-EXPECTED_PATH = os.path.join(os.path.dirname(__file__), "data", "expected")
+INPUT_PATH = os.path.join(DATA_PATH, "data", "input")
+EXPECTED_PATH = os.path.join(DATA_PATH, "data", "expected")
+OUTPUT_PATH = os.path.join(DATA_PATH, "data", "output")
 TEMP_PATH = "/tmp"
 
 PROFILE_LINES_PATH = os.path.join(DATA_PATH, "input", "profiles_lines.geojson")

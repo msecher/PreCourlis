@@ -1,11 +1,13 @@
 from qgis.core import (
     QgsFeatureSink,
+    QgsField,
     QgsProcessingException,
     QgsProcessingParameterCrs,
     QgsProcessingParameterFeatureSink,
     QgsProcessingParameterFile,
     QgsWkbTypes,
 )
+from qgis.PyQt.QtCore import QVariant
 
 from PreCourlis.core.precourlis_file import PreCourlisFileLine
 from PreCourlis.lib.mascaret.mascaretgeo_file import MascaretGeoFile
@@ -41,6 +43,8 @@ class ImportGeorefAlgorithm(PreCourlisAlgorithm):
         file = MascaretGeoFile(input_path)
 
         fields = PreCourlisFileLine.base_fields()
+        for layer_name in file.layer_names:
+            fields.append(QgsField(layer_name, QVariant.String, len=100000))
 
         (sink, dest_id) = self.parameterAsSink(
             parameters,

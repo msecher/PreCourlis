@@ -13,7 +13,7 @@ from PreCourlis.processing.precourlis_provider import PreCourlisProvider
 
 from .. import (
     EXPECTED_PATH,
-    TEMP_PATH,
+    OUTPUT_PATH,
     OVERWRITE_EXPECTED,
 )
 
@@ -46,7 +46,7 @@ class TestCase(TestCaseBase):
             if OVERWRITE_EXPECTED:
                 outputs[key] = expected[key]
             else:
-                outputs[key] = os.path.join(TEMP_PATH, filename)
+                outputs[key] = os.path.join(OUTPUT_PATH, filename)
 
         outputs = processing.run(
             self.ALGORITHM_ID,
