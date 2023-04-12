@@ -1,10 +1,13 @@
 *.qm
 *.pyc
+
+dist
 help/build
 PreCourlis/lib/TatooineMesher
 PreCourlis/ui/resources_rc.py
-.coverage
+test/data/output
+
+.coverage*
 .noseids
 docker-compose.override.yaml
 local.mk
-PreCourlis.zip
