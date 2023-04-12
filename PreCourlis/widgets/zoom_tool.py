@@ -38,7 +38,7 @@ class ZoomTool:
     def on_scroll(self, event):
         if event.xdata is None or event.ydata is None:
             return
-        self.zoom_by_factor(1.5 ** event.step, event.xdata, event.ydata)
+        self.zoom_by_factor(1.5**event.step, event.xdata, event.ydata)
         self.canvas.toolbar.push_current()
 
     def center(self):
@@ -60,7 +60,7 @@ class ZoomTool:
         return Bbox.from_extents(xlim[0], ylim[0], xlim[1], ylim[1])
 
     def constrained_bbox(self, bbox, limits):
-        """"Adjust bbox in limits"""
+        """Adjust bbox in limits"""
         xmin = bbox.xmin
         ymin = bbox.ymin
         xmax = bbox.xmax

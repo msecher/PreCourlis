@@ -20,7 +20,6 @@ from PreCourlis.processing.precourlis_algorithm import PreCourlisAlgorithm
 
 
 class PointsToLinesAlgorithm(PreCourlisAlgorithm):
-
     INPUT = "INPUT"
     AXIS = "AXIS"
     FIRST_SECTION_ABS_LONG = "FIRST_SECTION_ABS_LONG"

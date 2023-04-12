@@ -15,7 +15,6 @@ from PreCourlis.processing.precourlis_algorithm import PreCourlisAlgorithm
 
 
 class ImportLayerFromDemAlgorithm(PreCourlisAlgorithm):
-
     INPUT = "INPUT"
     LAYER_NAME = "LAYER_NAME"
     DEM = "DEM"

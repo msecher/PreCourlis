@@ -278,7 +278,6 @@ class Reach(ReachBase):
 
         section = None
         for f in layer.getFeatures():
-
             section = Section(
                 my_id=f.attribute("sec_id"),
                 name=f.attribute("sec_name"),

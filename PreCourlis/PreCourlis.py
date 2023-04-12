@@ -72,7 +72,7 @@ class PreCourlisPlugin:
         # Declare instance attributes
         self.action = None
         self.actions = []
-        self.menu = self.tr(u"&PreCourlis")
+        self.menu = self.tr("&PreCourlis")
         self.profile_dialog = None
         self.provider = None
 

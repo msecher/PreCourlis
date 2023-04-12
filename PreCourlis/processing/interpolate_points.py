@@ -55,7 +55,6 @@ class ParameterShapefileDestination(QgsProcessingParameterVectorDestination):
 
 
 class InterpolatePointsAlgorithm(PreCourlisAlgorithm):
-
     SECTIONS = "SECTIONS"
     AXIS = "AXIS"
     CONSTRAINT_LINES = "CONSTRAINT_LINES"
@@ -183,7 +182,6 @@ class InterpolatePointsAlgorithm(PreCourlisAlgorithm):
             100.0 / sections.featureCount() if sections.featureCount() else 0
         )
         for current, f in enumerate(sections.getFeatures(request)):
-
             if previous_sec_id is None or previous_sec_id != f.attribute("sec_id"):
                 if previous_sec_id is not None:
                     right_line.addVertex(previous_point)

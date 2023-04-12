@@ -15,7 +15,6 @@ from PreCourlis.processing.precourlis_algorithm import PreCourlisAlgorithm
 
 
 class ImportTracksAlgorithm(PreCourlisAlgorithm):
-
     TRACKS = "TRACKS"
     AXIS = "AXIS"
     FIRST_SECTION_ABS_LONG = "FIRST_SECTION_ABS_LONG"

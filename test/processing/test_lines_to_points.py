@@ -5,7 +5,6 @@ from . import TestCase
 
 
 class TestLinesToPointsAlgorithm(TestCase):
-
     ALGORITHM_ID = "precourlis:lines_to_points"
     DEFAULT_PARAMS = {
         "INPUT": PROFILE_LINES_PATH,
