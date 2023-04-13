@@ -46,6 +46,13 @@ QGISDIR ?= .local/share/QGIS/QGIS3/profiles/default
 PLUGINNAME = PreCourlis
 LOCALES = fr
 
+QGIS_VERSION ?= 3.16
+QGIS_TAG = release-$(subst .,_,$(QGIS_VERSION))
+
+export EXPECTED_PATH = /app/test/data/expected-$(subst .,_,$(QGIS_VERSION))
+
+export DOCKER_BUILDKIT = 1
+
 DOCKER_RUN_CMD = docker-compose run --rm --user `id -u` builder
 
 default: help
@@ -59,7 +66,12 @@ help: ## Display this help message
 
 .PHONY: docker-build
 docker-build:
-	docker build --target test --tag camptocamp/edf-precourlis-builder ./docker
+	docker build \
+		--target test \
+		--build-arg QGIS_TAG=$(QGIS_TAG) \
+		--build-arg EXPECTED_PATH=$(EXPECTED_PATH) \
+		--tag camptocamp/edf-precourlis-builder \
+		./docker
 
 .PHONY: build
 build: ## Compile resources and help files

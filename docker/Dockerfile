@@ -1,22 +1,34 @@
-FROM qgis/qgis:release-3_10 as test
+ARG QGIS_TAG=release-3_16
+FROM qgis/qgis:${QGIS_TAG} as test
 
-RUN apt update \
-     && apt remove -y python3-coverage \
-     && apt install -y \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    apt update \
+    && apt remove -y python3-coverage \
+    && DEBIAN_FRONTEND=noninteractive apt install -y \
+        git \
+        grass \
+        make \
+        pyqt5-dev-tools \
         python3-venv \
-        vim
+        qttools5-dev-tools \
+        vim \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install \
-    black==22.8.0 \
-    coverage \
-    flake8 \
-    matplotlib==3.1.3 \
-    nose \
-    numpy==1.18.3 \
-    pydevd \
-    pytest \
-    pytest-cov \
-    scipy==1.4.1
+RUN --mount=type=cache,target=/root/.cache \
+    pip3 install \
+        black==22.8.0 \
+        coverage \
+        debugpy \
+        flake8 \
+        matplotlib==3.1.3 \
+        nose \
+        numpy==1.18.3 \
+        psycopg2-binary \
+        pydevd \
+        pytest \
+        pytest-cov \
+        pyyaml \
+        scipy==1.4.1
 
 RUN mkdir -p /app /home/user && chmod 777 /home/user
 
@@ -33,5 +45,8 @@ ENV DISPLAY=:99 \
 RUN mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
 COPY /docker-entrypoint.sh /
 ENTRYPOINT ["/docker-entrypoint.sh"]
+
+ARG EXPECTED_PATH
+ENV EXPECTED_PATH=$EXPECTED_PATH
 
 CMD ["pytest"]
