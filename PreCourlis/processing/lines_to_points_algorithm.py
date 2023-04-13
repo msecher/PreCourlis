@@ -17,7 +17,6 @@ from PreCourlis.processing.precourlis_algorithm import PreCourlisAlgorithm
 
 
 class LinesToPointsAlgorithm(PreCourlisAlgorithm):
-
     INPUT = "INPUT"
     OUTPUT = "OUTPUT"
 
@@ -63,14 +62,13 @@ class LinesToPointsAlgorithm(PreCourlisAlgorithm):
         total = 100.0 / source.featureCount() if source.featureCount() else 0
         features = source.getFeatures()
         for current, line_feature in enumerate(features):
-
             # Take only the first parts (QgsMultiLineString => QgsLineString)
             line = next(line_feature.geometry().constParts()).clone()
             line_layers_values = [
                 line_feature.attribute(layer).split(",") for layer in layers
             ]
 
-            for point, p_id, topo_bat, abs_lat, zfond, point_layers_values, in zip(
+            for (point, p_id, topo_bat, abs_lat, zfond, point_layers_values,) in zip(
                 line.points(),
                 line_feature.attribute("p_id").split(","),
                 line_feature.attribute("topo_bat").split(","),

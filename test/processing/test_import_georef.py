@@ -7,7 +7,6 @@ GEOREF_PATH = os.path.join(DATA_PATH, "input", "test.georef")
 
 
 class TestImportGeorefAlgorithm(TestCase):
-
     ALGORITHM_ID = "precourlis:import_georef"
     DEFAULT_PARAMS = {"INPUT": GEOREF_PATH, "CRS": "EPSG:2154"}
 

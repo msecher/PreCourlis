@@ -51,11 +51,11 @@ check: black-check flake8
 
 .PHONY: black
 black:
-	black --exclude lib $(PLUGINNAME) test
+	black $(PLUGINNAME) test
 
 .PHONY: black-check
 black-check:
-	black --exclude lib --check $(PLUGINNAME) test
+	black --check $(PLUGINNAME) test
 
 .PHONY: flake8
 flake8:

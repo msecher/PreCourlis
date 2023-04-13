@@ -5,7 +5,6 @@ from . import TestCase
 
 
 class TestExportGeorefAlgorithm(TestCase):
-
     ALGORITHM_ID = "precourlis:export_courlis"
     DEFAULT_PARAMS = {"INPUT": PROFILE_LINES_PATH}
 

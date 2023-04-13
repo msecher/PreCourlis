@@ -22,7 +22,6 @@ Processing.initialize()
 
 
 class TestCase(TestCaseBase):
-
     ALGORITHM_ID = None
     DEFAULT_PARAMS = {}
 

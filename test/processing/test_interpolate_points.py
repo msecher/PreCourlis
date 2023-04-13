@@ -18,7 +18,6 @@ CONSTRAINT_LINES = [
 
 
 class TestInterpolatePointsAlgorithm(TestCase):
-
     ALGORITHM_ID = "precourlis:interpolate_points"
     DEFAULT_PARAMS = {
         "SECTIONS": SECTIONS_PATH,

@@ -9,7 +9,6 @@ DEM_PATH = os.path.join(DATA_PATH, "input", "cas2Mnt.asc")
 
 
 class TestPrepareTracksAlgorithm(TestCase):
-
     ALGORITHM_ID = "precourlis:prepare_tracks"
     DEFAULT_PARAMS = {
         "TRACKS": TRACKS_PATH,

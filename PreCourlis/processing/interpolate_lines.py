@@ -16,7 +16,6 @@ from PreCourlis.processing.precourlis_algorithm import PreCourlisAlgorithm
 
 
 class InterpolateLinesAlgorithm(PreCourlisAlgorithm):
-
     SECTIONS = "SECTIONS"
     AXIS = "AXIS"
     CONSTRAINT_LINES = "CONSTRAINT_LINES"

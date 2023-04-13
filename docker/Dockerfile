@@ -1,4 +1,3 @@
-# Might be replaced by qgis/qgis:3.10
 FROM qgis/qgis:release-3_10 as test
 
 RUN apt update \
@@ -8,7 +7,7 @@ RUN apt update \
         vim
 
 RUN pip3 install \
-    black \
+    black==22.8.0 \
     coverage \
     flake8 \
     matplotlib==3.1.3 \

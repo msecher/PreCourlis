@@ -13,7 +13,6 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 
 class GraphWidget(FigureCanvas):
-
     editing_finished = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
